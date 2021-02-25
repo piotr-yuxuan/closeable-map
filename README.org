@@ -21,7 +21,7 @@ Some Clojure datastructures implement ~IFn~:
 ([:a :b :c] 1) ;; => :b
 #+END_SRC
 
-Clojure maps (IPersistentMap) implement ~IFn~, for ~invoke()~ of one
+Clojure maps (~IPersistentMap~) implement ~IFn~, for ~invoke()~ of one
 argument (a key) with an optional second argument (a default value),
 i.e. maps are functions of their keys. ~nil~ keys and values are fine.
 
