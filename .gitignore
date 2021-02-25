@@ -1,0 +1,8 @@
+/target
+/classes
+/checkouts
+*.jar
+*.class
+/.cpcache
+/.nrepl-history
+/.nrepl-port

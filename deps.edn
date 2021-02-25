@@ -1,0 +1,24 @@
+{:paths ["src" "resources"]
+ :deps {potemkin/potemkin {:mvn/version "0.4.5"}}
+ :aliases
+ {:test {:extra-paths ["test"]}
+  :run-x {:extra-paths ["dev"]
+          :ns-default user
+          :exec-fn run-x}
+  :runner
+  {:extra-deps {com.cognitect/test-runner
+                {:git/url "https://github.com/cognitect-labs/test-runner"
+                 :sha "b6b3193fcc42659d7e46ecd1884a228993441182"}}
+   :main-opts ["-m" "cognitect.test-runner"
+               "-d" "test"]}
+  :jar {:replace-deps {seancorfield/depstar {:mvn/version "2.0.171"}}
+        :exec-fn hf.depstar/jar
+        :exec-args {:jar "closeable-map.jar" :sync-pom true}}
+  :install {:replace-deps {slipset/deps-deploy {:mvn/version "0.1.5"}}
+            :exec-fn deps-deploy.deps-deploy/deploy
+            :exec-args {:installer :local :artifact "closeable-map.jar"}}
+  :deploy {:replace-deps {slipset/deps-deploy {:mvn/version "0.1.5"}}
+           :exec-fn deps-deploy.deps-deploy/deploy
+           :exec-args {:installer :remote
+                       :sign-releases? true
+                       :artifact "closeable-map.jar"}}}}

@@ -1,0 +1,152 @@
+#+TITLE:closeable-map
+
+A Clojure map which implements ~java.io.Closeable~.
+
+* Installation
+
+See https://clojars.org/piotr-yuxuan/closeable-map.
+
+* Description
+
+You might not need ~closeable-map~, perhaps [[https://github.com/jarohen/with-open][jarohen/with-open]] or
+[[https://github.com/robertluo/fun-map][robertluo/fun-map]] are better fit for you. They provide more general,
+more powerful tools. This library focus on doing one thing: a map
+which represents a execution context, which you can close.
+
+Some Clojure datastructures implement ~IFn~:
+
+#+BEGIN_SRC clojure
+({:a 1} :a) ;; => 1
+(remove #{:a} [:a :b :c]) ;; => '(:b :c)
+([:a :b :c] 1) ;; => :b
+#+END_SRC
+
+Clojure maps (IPersistentMap) implement ~IFn~, for ~invoke()~ of one
+argument (a key) with an optional second argument (a default value),
+i.e. maps are functions of their keys. ~nil~ keys and values are fine.
+
+I have found desirable in some cases to put stateful references in a
+~context~ map:
+
+#+BEGIN_SRC clojure
+;; Start an API
+(defn -main
+  []
+  (let [config (config/load-config)
+        context {:producer (kafka-producer config)
+                 :consumer (kafka-consumer config)}]
+    (http/start-server
+      (api context)
+      {:port 3030})))
+#+END_SRC
+
+So far so good, but what about testing? It would be nice to have
+tests like:
+
+#+BEGIN_SRC clojure
+;; doesn't work
+(with-open [context {:producer (kafka-producer config)
+                     :consumer (kafka-consumer config)}]
+  (is (= :yay/🚀 (some-business/function context))))
+#+END_SRC
+
+so that a test context is declared, assumptions are checked against
+it, and finally context is closed.
+
+This library defines a new type of map, ~CloseableMap~, which
+implements ~java.io.Closeable~. It provides one function to create
+such map from a Clojure map. When key ~:close~ is present, it is
+assumed that it is a function which knows how to destroy the state, or
+a collection of functions, each of which destroy of part of the state.
+
+#+BEGIN_SRC clojure
+(with-open [context (closeable-map {:producer (kafka-producer config)
+                                    :consumer (kafka-consumer config)
+                                    :close [(fn [{:keys [producer] (.close producer)}])
+                                            (fn [{:keys [consumer] (.close consumer)}])]})]
+  (is (= :yay/🚀 (some-business/function context))))
+#+END_SRC
+
+* References
+
+- Getting started: https://clojure.org/guides/getting_started
+- ~deps.edn~ guide: https://clojure.org/guides/deps_and_cli
+- ~deps.edn~ reference: https://clojure.org/reference/deps_and_cli
+- Tools and how-to guides: https://practicalli.github.io/clojure/
+
+* Usage
+
+Invoking the function provided by this library from the
+command-line. It returns an unimpressive map, which is what we expect:
+
+#+BEGIN_SRC zsh
+clojure -X:run-x :arg '{:a 1}'
+{:a 1}
+#+END_SRC
+
+Also, see [[./test/piotr_yuxuan/closeable_map_test.clj][./test/piotr_yuxuan/closeable_map_test.clj]].
+
+This project was created with:
+
+#+BEGIN_SRC zsh
+clojure -X:project/new :name piotr-yuxuan/closeable-map
+#+END_SRC
+
+Run the project's tests:
+
+#+BEGIN_SRC zsh
+clojure -M:test:runner
+#+END_SRC
+
+Lint your code with:
+
+#+BEGIN_SRC zsh
+clojure -M:lint/idiom
+clojure -M:lint/kondo
+#+END_SRC
+
+Visualise links between project vars with:
+
+#+BEGIN_SRC zsh
+mkdir graphs
+clojure -M:graph/vars-svg
+#+END_SRC
+
+Build a deployable jar of this library:
+
+#+BEGIN_SRC zsh
+clojure -X:jar
+#+END_SRC
+
+This will update the generated ~pom.xml~ file to keep the dependencies
+synchronized with your ~deps.edn~ file. The file ~pom.xml~ should be
+considered the source of truth regarding the version. It can be
+updated manually, or during the build process by using ~:version~:
+
+#+BEGIN_SRC zsh
+clojure -X:jar :version '"1.2.3"'
+#+END_SRC
+
+Install it locally:
+
+#+BEGIN_SRC zsh
+clojure -X:install
+#+END_SRC
+
+Deploy it to Clojars -- needs ~CLOJARS_USERNAME~ and
+~CLOJARS_PASSWORD~ environment variables (requires the ~pom.xml~
+file):
+
+#+BEGIN_SRC zsh
+clojure -X:deploy
+#+END_SRC
+
+Deploy it to GitHub packages with [[https://docs.github.com/en/packages/guides/configuring-apache-maven-for-use-with-github-packages][this guide]] and:
+
+#+BEGIN_SRC zsh
+mvn deploy
+#+END_SRC
+
+If you don't plan to install/deploy the library, you can remove the
+~pom.xml~ file but you will also need to remove ~:sync-pom true~ from
+the ~deps.edn~ file (in the ~:exec-args~ for ~depstar~).
