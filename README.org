@@ -57,13 +57,13 @@ This library defines a new type of map, ~CloseableMap~, which
 implements ~java.io.Closeable~. It provides one function to create
 such map from a Clojure map. When key ~:close~ is present, it is
 assumed that it is a function which knows how to destroy the state, or
-a collection of functions, each of which destroy of part of the state.
+a collection of functions, of which each destroys of part of the state.
 
 #+BEGIN_SRC clojure
 (with-open [context (closeable-map {:producer (kafka-producer config)
                                     :consumer (kafka-consumer config)
-                                    :close [(fn [{:keys [producer] (.close producer)}])
-                                            (fn [{:keys [consumer] (.close consumer)}])]})]
+                                    :close [(fn [{:keys [producer]} (.close producer)])
+                                            (fn [{:keys [consumer]} (.close consumer)])]})]
   (is (= :yay/🚀 (some-business/function context))))
 #+END_SRC
 
