@@ -4,7 +4,7 @@ A Clojure map which implements ~java.io.Closeable~.
 
 * Installation
 
-See https://clojars.org/piotr-yuxuan/closeable-map [[https://clojars.org/piotr-yuxuan/closeable-map][[[https://img.shields.io/clojars/v/piotr-yuxuan/closeable-map.svg]]]
+See [[https://clojars.org/piotr-yuxuan/closeable-map][https://img.shields.io/clojars/v/piotr-yuxuan/closeable-map.svg]]
 
 * Description
 
