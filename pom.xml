@@ -26,11 +26,11 @@
     <url>https://github.com/piotr-yuxuan/closeable-map/issues</url>
   </issueManagement>
   <distributionManagement>
-   <repository>
-     <id>github</id>
-     <name>GitHub piotr-yuxuan Apache Maven Packages</name>
-     <url>https://maven.pkg.github.com/piotr-yuxuan/closeable-map</url>
-   </repository>
+    <repository>
+      <id>github</id>
+      <name>GitHub piotr-yuxuan Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/piotr-yuxuan/closeable-map</url>
+    </repository>
   </distributionManagement>
   <dependencies>
     <dependency>
