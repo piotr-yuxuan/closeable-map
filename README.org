@@ -2,6 +2,15 @@
 
 A Clojure map which implements ~java.io.Closeable~.
 
+* Content                                                         :TOC:
+- [[#installation][Installation]]
+- [[#tldr-example][TL;DR example]]
+- [[#description][Description]]
+- [[#references][References]]
+- [[#usage][Usage]]
+- [[#notes-on-pomxml][Notes on ~pom.xml~]]
+- [[#readme-and-org-mode][README and org-mode]]
+
 * Installation
 
 [[https://clojars.org/piotr-yuxuan/closeable-map][https://img.shields.io/clojars/v/piotr-yuxuan/closeable-map.svg]]
@@ -173,3 +182,9 @@ As of now it is suggested to run ~lein pom~ to update the pom before
 installing a jar or deploying a new version, so that the file
 ~pom.xml~ is correctly updated by Leiningen (especially the scm
 revision), which I don't know yet how to do with ~deps.edn~ tooling.
+
+* README and org-mode
+
+#+BEGIN_SRC zsh
+pandoc -s README.org -o README.md
+#+END_SRC
