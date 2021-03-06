@@ -160,7 +160,7 @@ clojure -X:deploy
 Deploy it to GitHub packages with [[https://docs.github.com/en/packages/guides/configuring-apache-maven-for-use-with-github-packages][this guide]] and:
 
 #+BEGIN_SRC zsh
-mvn deploy
+mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/piotr-yuxuan/closeable-map
 #+END_SRC
 
 * Notes on ~pom.xml~
