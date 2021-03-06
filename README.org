@@ -6,6 +6,24 @@ A Clojure map which implements ~java.io.Closeable~.
 
 [[https://clojars.org/piotr-yuxuan/closeable-map][https://img.shields.io/clojars/v/piotr-yuxuan/closeable-map.svg]]
 
+* TL;DR example
+
+#+BEGIN_SRC clojure
+;; in your project
+(defn start
+  "Return an running context with stateful references which can be closed."
+  [config]
+  (assoc config
+    :server (http/start-server (api context) {:port 3030})
+    :producer (kafka-producer config)
+    :consumer (kafka-consumer config)))
+
+;; in test file
+(with-open [context (piotr-yuxuan/closeable-map (start config))]
+  (testing "unit test with isolated, repeatable context"
+    (is (= :yay/🚀 (some-business/function context)))))
+#+END_SRC
+
 * Description
 
 You might not need ~closeable-map~, perhaps [[https://github.com/jarohen/with-open][jarohen/with-open]] or
