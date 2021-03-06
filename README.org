@@ -91,6 +91,7 @@ a collection of functions, of which each destroys of part of the state.
 - ~deps.edn~ guide: https://clojure.org/guides/deps_and_cli
 - ~deps.edn~ reference: https://clojure.org/reference/deps_and_cli
 - Tools and how-to guides: https://practicalli.github.io/clojure/
+- Leiningen manual: https://github.com/technomancy/leiningen
 
 * Usage
 
@@ -133,21 +134,17 @@ clojure -M:graph/vars-svg
 Build a deployable jar of this library:
 
 #+BEGIN_SRC zsh
+lein pom
 clojure -X:jar
 #+END_SRC
 
 This will update the generated ~pom.xml~ file to keep the dependencies
-synchronized with your ~deps.edn~ file. The file ~pom.xml~ should be
-considered the source of truth regarding the version. It can be
-updated manually, or during the build process by using ~:version~:
-
-#+BEGIN_SRC zsh
-clojure -X:jar :version '"1.2.3"'
-#+END_SRC
+synchronized with your ~deps.edn~ file.
 
 Install it locally:
 
 #+BEGIN_SRC zsh
+lein pom
 clojure -X:install
 #+END_SRC
 
@@ -156,6 +153,7 @@ Deploy it to Clojars -- needs ~CLOJARS_USERNAME~ and
 file):
 
 #+BEGIN_SRC zsh
+lein pom
 clojure -X:deploy
 #+END_SRC
 
@@ -165,6 +163,13 @@ Deploy it to GitHub packages with [[https://docs.github.com/en/packages/guides/c
 mvn deploy
 #+END_SRC
 
+* Notes on ~pom.xml~
+
 If you don't plan to install/deploy the library, you can remove the
 ~pom.xml~ file but you will also need to remove ~:sync-pom true~ from
 the ~deps.edn~ file (in the ~:exec-args~ for ~depstar~).
+
+As of now it is suggested to run ~lein pom~ to update the pom before
+installing a jar or deploying a new version, so that the file
+~pom.xml~ is correctly updated by Leiningen (especially the scm
+revision), which I don't know yet how to do with ~deps.edn~ tooling.
