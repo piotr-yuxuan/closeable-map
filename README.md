@@ -152,6 +152,13 @@ lein pom
 clojure -X:install
 ```
 
+Create a new version once a jar has been created:
+- Make sure all reasonable documentation is here
+- Update resources/closeable-map.version
+- `lein pom`
+- Create a commit with title `Version x.y.z`
+- Create a git tag
+
 Deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD`
 environment variables (requires the `pom.xml` file):
 
