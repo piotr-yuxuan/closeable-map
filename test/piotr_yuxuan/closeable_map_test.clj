@@ -91,6 +91,27 @@
       (swap! log conj :after)
       (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :after] @log))))
 
+  (testing "recursively close nested state, using postwalk"
+    (let [log (atom [])]
+      (swap! log conj :before)
+      (with-open [_ (closeable-map {:nested {:leaf {:closeable/first (reify Closeable (close [_] (swap! log conj :on-close/closeable-first)))
+                                                    :down {:deepest {:closeable (reify Closeable (close [_] (swap! log conj :on-close/deepest-1)))}
+                                                           :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/deepest-2)))}
+                                                    :closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))}}
+                                    :close (fn [_] (swap! log conj :on-close/explicit-close))
+                                    :other :cheddar})]
+        (swap! log conj :with-open))
+      (swap! log conj :after)
+      (is (= @log
+             [:before
+              :with-open
+              :on-close/closeable-first
+              :on-close/deepest-1
+              :on-close/deepest-2
+              :on-close/closeable
+              :on-close/explicit-close
+              :after]))))
+
   (testing "forms with meta ^:piotr-yuxuan.closeable-map/fn are invoked as thunks (no-arg function)."
     (let [log (atom [])]
       (swap! log conj :before)
