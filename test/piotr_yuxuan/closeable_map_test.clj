@@ -70,7 +70,7 @@
              (reset! caught ex)))
       (is (= "close must be a function, or a sequence of functions" (ex-message @caught)))))
 
-  (testing "with no explicit `:close`, close all values that are instances of `AutoCloseable`"
+  (testing "close all values that are instances of `AutoCloseable`"
     (let [log (atom [])]
       (swap! log conj :before)
       (with-open [_ (closeable-map {:closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))
@@ -91,14 +91,23 @@
       (swap! log conj :after)
       (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :after] @log))))
 
-  (testing "When no explicit :close value, forms with meta ^:piotr-yuxuan.closeable-map/fn are invoked as thunks (no-arg function)."
+  (testing "forms with meta ^:piotr-yuxuan.closeable-map/fn are invoked as thunks (no-arg function)."
     (let [log (atom [])]
       (swap! log conj :before)
       (with-open [_ (closeable-map {:closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))
+                                    :ignored-closeable ^::closeable-map/ignore (reify Closeable (close [_] (swap! log conj :on-close/ignored-closeable)))
                                     :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/auto-closeable)))
-                                    :close-fn ^::closeable-map/fn (fn [] (swap! log conj :on-close/close-fn))
+                                    :some-close-fn ^::closeable-map/fn (fn [] (swap! log conj :on-close/some-close-fn))
                                     :non-close-fn (fn [] (swap! log conj :on-close/non-close-fn))
+                                    :close (fn [_] (swap! log conj :on-close/explicit-close))
                                     :other :smurf})]
         (swap! log conj :with-open))
       (swap! log conj :after)
-      (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :on-close/close-fn :after] @log)))))
+      (is (= @log
+             [:before
+              :with-open
+              :on-close/closeable
+              :on-close/auto-closeable
+              :on-close/some-close-fn
+              :on-close/explicit-close
+              :after])))))
