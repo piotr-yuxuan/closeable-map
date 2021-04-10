@@ -20,7 +20,7 @@
       (is (= m {:no :op}))
       (is (= {:a 1} (meta m)))))
 
-  (testing "preserve explicit meta"
+  (testing "explicit meta are preserved, and replace existing meta"
     (with-open [m (closeable-map (with-meta {:no :op} {:a 1}) {:b 2})]
       (is (= m {:no :op}))
       (is (= {:b 2} (meta m)))))
