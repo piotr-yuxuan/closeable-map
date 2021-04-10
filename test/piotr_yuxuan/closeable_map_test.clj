@@ -106,10 +106,10 @@
       (is (= @log
              [:before
               :with-open
+              :on-close/explicit-close
               :on-close/closeable
               :on-close/auto-closeable
               :on-close/some-close-fn
-              :on-close/explicit-close
               :after]))))
 
   (testing "recursively close nested state, using postwalk"
