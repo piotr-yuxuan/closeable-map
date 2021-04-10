@@ -9,9 +9,14 @@
 (defn close-if-closeable!
   [form]
   ;; AutoCloseable is a superinterface of Closeable.
-  (cond (::ignore (meta form)) nil
-        (instance? AutoCloseable form) (.close ^AutoCloseable form)
+  (cond (instance? AutoCloseable form) (.close ^AutoCloseable form)
         (::fn (meta form)) (let [thunk form] (thunk)))
+
+  (when-let [m (and (instance? Map form) ^Map form)]
+    (when-let [close (get m ::close)]
+      (cond (sequential? close) (run! #(% m) close)
+            (fn? close) (close m)
+            :else (throw (ex-info "close must be a function, or a sequence of functions" {:m m})))))
   form)
 
 (def-map-type CloseableMap [m mta]
@@ -23,13 +28,11 @@
   (with-meta [_ mta] (CloseableMap. m mta))
 
   Closeable ;; Closeable is a subinterface of AutoCloseable.
-  (^void close [this]
-    (walk/postwalk close-if-closeable! m)
-
-    (when-let [close (get m :close)]
-      (cond (sequential? close) (run! #(% m) close)
-            (fn? close) (close m)
-            :else (throw (ex-info "close must be a function, or a sequence of functions" {:m m, :mta mta}))))))
+  (^void close [this] (walk/prewalk
+                        (fn [form]
+                          (when-not (::ignore (meta form))
+                            (close-if-closeable! form)))
+                        m)))
 
 (defn ^Closeable closeable-map
   ([m] {:pre [(instance? Map {})]} (closeable-map m (meta m)))
