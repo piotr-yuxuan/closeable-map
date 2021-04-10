@@ -52,7 +52,32 @@ Syntactic sugar:
     :server (http/start-server (api context) {:port 3030})
     :producer (kafka-producer config)
     :consumer (kafka-consumer config)))
+```
 
+Nested closeable contexts, custom closeable values, and ignored items:
+
+``` clojure
+(require '[piotr-yuxuan/closeable-map :refer [closeable-hash-map] :as ctx])
+
+(defn start
+  "Return a running context with values that can be closed."
+  [config]
+  (closeable-hash-map
+    ;; Some libraries like http-kit don't return an instance of
+    ;; Closeable but a zero-arg function to stop a process.
+    :server ^::ctx/fn (http-kit/run-server {:port 3030})
+    :producer (kafka-producer config)
+    ;; This library will walk through all nested values and try to
+    ;; stop them.
+    :processes {:file-watcher (let [stop-function (fs/watch {})]
+                                ^::ctx/fn (fn [] (stop-function)))
+                :bitcoin-miner (let [stop-function (boil/oceans! {})]
+                                 ^::ctx/fn (fn [] (stop-function)))
+                ;; some additional logic to stop all processes.
+                ::ctx/close (fn [_nested-context] (flush-to-disk!))}
+    ;; Some nested execution context values may be very large. You can
+    ;; tell it to ignore some values.
+    :large-shop-history ^::ctx/ignore {}))
 ```
 
 ## Technicalities

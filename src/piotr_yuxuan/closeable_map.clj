@@ -42,4 +42,3 @@
   [& keyvals]
   {:pre [(even? (count keyvals))]}
   (closeable-map (apply hash-map keyvals)))
-
