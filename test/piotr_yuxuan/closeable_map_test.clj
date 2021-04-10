@@ -1,6 +1,6 @@
 (ns piotr-yuxuan.closeable-map-test
   (:require [clojure.test :refer [deftest testing is]]
-            [piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map]])
+            [piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map] :as closeable-map])
   (:import (clojure.lang ExceptionInfo)
            (java.lang AutoCloseable)
            (java.io Closeable)))
@@ -24,6 +24,19 @@
     (with-open [m (closeable-map (with-meta {:no :op} {:a 1}) {:b 2})]
       (is (= m {:no :op}))
       (is (= {:b 2} (meta m)))))
+
+  (testing "preserve values"
+    (let [closed? (atom false)
+          closeable (reify Closeable (close [_] (reset! closed? true)))
+          control-m {:closed? closed?, :no :op, :closeable closeable}
+          m (closeable-map control-m)]
+      (is (= control-m m))
+      (is (not @closed?))
+      (with-open [open-m (closeable-map m)]
+        (is (not @closed?))
+        (is (= m open-m control-m)))
+      (is @closed?)
+      (is (= control-m m))))
 
   (testing "function is called"
     (let [log (atom [])]
@@ -76,4 +89,16 @@
                       :other :pastry)]
         (swap! log conj :with-open))
       (swap! log conj :after)
-      (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :after] @log)))))
+      (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :after] @log))))
+
+  (testing "When no explicit :close value, forms with meta ^:piotr-yuxuan.closeable-map/fn are invoked as thunks (no-arg function)."
+    (let [log (atom [])]
+      (swap! log conj :before)
+      (with-open [_ (closeable-map {:closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))
+                                    :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/auto-closeable)))
+                                    :close-fn ^::closeable-map/fn (fn [] (swap! log conj :on-close/close-fn))
+                                    :non-close-fn (fn [] (swap! log conj :on-close/non-close-fn))
+                                    :other :smurf})]
+        (swap! log conj :with-open))
+      (swap! log conj :after)
+      (is (= [:before :with-open :on-close/closeable :on-close/auto-closeable :on-close/close-fn :after] @log)))))
