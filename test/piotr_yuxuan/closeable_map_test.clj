@@ -1,6 +1,6 @@
 (ns piotr-yuxuan.closeable-map-test
   (:require [clojure.test :refer [deftest testing is]]
-            [piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map] :as closeable-map])
+            [piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map] :as ctx])
   (:import (clojure.lang ExceptionInfo)
            (java.lang AutoCloseable)
            (java.io Closeable)))
@@ -42,9 +42,9 @@
     (let [log (atom [])]
       (swap! log conj :before)
       (with-open [m (closeable-map {:inner-log log
-                                    ::closeable-map/close (fn [m]
-                                                            ;; self-referential
-                                                            (swap! (:inner-log m) conj :on-close))})]
+                                    ::ctx/close (fn [m]
+                                                  ;; self-referential
+                                                  (swap! (:inner-log m) conj :on-close))})]
         (swap! log conj :with-open)
         ;; with-open only allows Symbols in bindings
         ;; See https://github.com/jarohen/with-open
@@ -56,16 +56,16 @@
   (testing "collection of functions: called in order"
     (let [log (atom [])]
       (swap! log conj :before)
-      (with-open [_ (closeable-map {::closeable-map/close [(fn [_] (swap! log conj :on-close/first))
-                                                           (fn [_] (swap! log conj :on-close/second))
-                                                           (fn [_] (swap! log conj :on-close/third))]})]
+      (with-open [_ (closeable-map {::ctx/close [(fn [_] (swap! log conj :on-close/first))
+                                                 (fn [_] (swap! log conj :on-close/second))
+                                                 (fn [_] (swap! log conj :on-close/third))]})]
         (swap! log conj :with-open))
       (swap! log conj :after)
       (is (= [:before :with-open :on-close/first :on-close/second :on-close/third :after] @log))))
 
   (testing "throws an exception when incorrect value type"
     (let [caught (atom nil)]
-      (try (with-open [_ (closeable-map {::closeable-map/close :lolipop})])
+      (try (with-open [_ (closeable-map {::ctx/close :lolipop})])
            (catch ExceptionInfo ex
              (reset! caught ex)))
       (is (= "close must be a function, or a sequence of functions" (ex-message @caught)))))
@@ -95,11 +95,11 @@
     (let [log (atom [])]
       (swap! log conj :before)
       (with-open [_ (closeable-map {:closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))
-                                    :ignored-closeable ^::closeable-map/ignore (reify Closeable (close [_] (swap! log conj :on-close/ignored-closeable)))
+                                    :ignored-closeable ^::ctx/ignore (reify Closeable (close [_] (swap! log conj :on-close/ignored-closeable)))
                                     :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/auto-closeable)))
-                                    :some-close-fn ^::closeable-map/fn (fn [] (swap! log conj :on-close/some-close-fn))
+                                    :some-close-fn ^::ctx/fn (fn [] (swap! log conj :on-close/some-close-fn))
                                     :non-close-fn (fn [] (swap! log conj :on-close/non-close-fn))
-                                    ::closeable-map/close (fn [_] (swap! log conj :on-close/explicit-close))
+                                    ::ctx/close (fn [_] (swap! log conj :on-close/explicit-close))
                                     :other :smurf})]
         (swap! log conj :with-open))
       (swap! log conj :after)
@@ -115,12 +115,12 @@
   (testing "recursively close nested state, using postwalk"
     (let [log (atom [])]
       (swap! log conj :before)
-      (with-open [_ (closeable-map {:top-level-fn ^::closeable-map/fn (fn [] (swap! log conj :top-level-fn/close))
-                                    :nested {:nested-fn ^::closeable-map/fn (fn [] (swap! log conj :nested-fn/close))
-                                             :deepest ^::closeable-map/ignore {:nested-fn ^::closeable-map/fn (fn [] (swap! log conj :ignored/close))
-                                                                               ::closeable-map/close (fn [_] (swap! log conj :ignored/nested-close))}
-                                             ::closeable-map/close (fn [_] (swap! log conj :closeable-map/nested-close))}
-                                    ::closeable-map/close (fn [_] (swap! log conj :closeable-map/close))})]
+      (with-open [_ (closeable-map {:top-level-fn ^::ctx/fn (fn [] (swap! log conj :top-level-fn/close))
+                                    :nested {:nested-fn ^::ctx/fn (fn [] (swap! log conj :nested-fn/close))
+                                             :deepest ^::ctx/ignore {:nested-fn ^::ctx/fn (fn [] (swap! log conj :ignored/close))
+                                                                     ::ctx/close (fn [_] (swap! log conj :ignored/nested-close))}
+                                             ::ctx/close (fn [_] (swap! log conj :closeable-map/nested-close))}
+                                    ::ctx/close (fn [_] (swap! log conj :closeable-map/close))})]
         (swap! log conj :with-open))
       (swap! log conj :after)
       (is (= @log
@@ -136,12 +136,12 @@
       (with-open [_ (closeable-map {:nested {:leaf {:closeable/first (reify Closeable (close [_] (swap! log conj :on-close/closeable-first)))
                                                     :down {:deepest {:closeable (reify Closeable (close [_] (swap! log conj :on-close/deepest-1)))}
                                                            :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/deepest-2)))
-                                                           ::closeable-map/close (fn [_] (swap! log conj :on-close/nested-explicit-close))}
-                                                    :ignored-key ^::closeable-map/ignore {:deepest {:closeable (reify Closeable (close [_] (swap! log conj :on-close/ignored)))}
-                                                                                          :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/ignored)))
-                                                                                          ::closeable-map/close (fn [_] (swap! log conj :on-close/ignored))}
+                                                           ::ctx/close (fn [_] (swap! log conj :on-close/nested-explicit-close))}
+                                                    :ignored-key ^::ctx/ignore {:deepest {:closeable (reify Closeable (close [_] (swap! log conj :on-close/ignored)))}
+                                                                                :auto-closeable (reify AutoCloseable (close [_] (swap! log conj :on-close/ignored)))
+                                                                                ::ctx/close (fn [_] (swap! log conj :on-close/ignored))}
                                                     :closeable (reify Closeable (close [_] (swap! log conj :on-close/closeable)))}}
-                                    ::closeable-map/close (fn [_] (swap! log conj :on-close/explicit-close))
+                                    ::ctx/close (fn [_] (swap! log conj :on-close/explicit-close))
                                     :other :cheddar})]
         (swap! log conj :with-open))
       (swap! log conj :after)
