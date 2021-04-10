@@ -1,4 +1,4 @@
-A Clojure map which implements `java.io.Closeable`.
+A Clojure map that implements `java.io.Closeable`.
 
 # Installation
 
@@ -12,7 +12,7 @@ A Clojure map which implements `java.io.Closeable`.
 ``` clojure
 ;; in your project
 (defn start
-  "Return an running context with stateful references which can be closed."
+  "Return an running context with stateful references that can be closed."
   [config]
   (assoc config
     :server (http/start-server (api context) {:port 3030})
@@ -31,7 +31,7 @@ You might not need `closeable-map`, perhaps
 [jarohen/with-open](https://github.com/jarohen/with-open) or
 [robertluo/fun-map](https://github.com/robertluo/fun-map) are better fit
 for you. They provide more general, more powerful tools. This library
-focus on doing one thing: a map which represents a execution context,
+focus on doing one thing: a map that represents a execution context,
 which you can close.
 
 Some Clojure datastructures implement `IFn`:
@@ -77,7 +77,7 @@ and finally context is closed.
 This library defines a new type of map, `CloseableMap`, which implements
 `java.io.Closeable`. It provides one function to create such map from a
 Clojure map. When key `:close` is present, it is assumed that it is a
-function which knows how to destroy the state, or a collection of
+function that knows how to destroy the state, or a collection of
 functions, of which each destroys of part of the state.
 
 ``` clojure
@@ -90,11 +90,11 @@ functions, of which each destroys of part of the state.
 
 # References
 
--   Getting started: <https://clojure.org/guides/getting_started>
--   `deps.edn` guide: <https://clojure.org/guides/deps_and_cli>
--   `deps.edn` reference: <https://clojure.org/reference/deps_and_cli>
--   Tools and how-to guides: <https://practicalli.github.io/clojure/>
--   Leiningen manual: <https://github.com/technomancy/leiningen>
+- Getting started: <https://clojure.org/guides/getting_started>
+- `deps.edn` guide: <https://clojure.org/guides/deps_and_cli>
+- `deps.edn` reference: <https://clojure.org/reference/deps_and_cli>
+- Tools and how-to guides: <https://practicalli.github.io/clojure/>
+- Leiningen manual: <https://github.com/technomancy/leiningen>
 
 # Usage
 
