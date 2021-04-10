@@ -6,7 +6,7 @@
             :distribution :repo
             :comments "See also GPL_ADDITION.org"}
   :scm {:name "git"
-        :url "https://github.com/piotr-yuxuan/closeable-map.git"}
+        :url "https://github.com/piotr-yuxuan/closeable-map"}
   :pom-addition [:developers [:developer
                               [:name "胡雨軒 Петр"]
                               [:url "https://github.com/piotr-yuxuan"]]]
