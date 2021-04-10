@@ -1,6 +1,7 @@
 (ns piotr-yuxuan.closeable-map
-  (:require [potemkin :refer [def-map-type]]
-            [clojure.data])
+  (:require [clojure.data]
+            [clojure.walk :as walk]
+            [potemkin :refer [def-map-type]])
   (:import (java.io Closeable)
            (java.lang AutoCloseable)
            (java.util Map)))
