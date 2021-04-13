@@ -13,7 +13,7 @@
         (::fn (meta form)) (let [thunk form] (thunk)))
 
   (when-let [m (and (instance? Map form) ^Map form)]
-    (when-let [close (get m ::close)]
+    (when-let [close (get m ::on-close)]
       (cond (sequential? close) (run! #(% m) close)
             (fn? close) (close m)
             :else (throw (ex-info "close must be a function, or a sequence of functions" {:m m})))))

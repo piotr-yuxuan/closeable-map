@@ -5,13 +5,8 @@
 [![GitHub license](https://img.shields.io/github/license/piotr-yuxuan/closeable-map)](https://github.com/piotr-yuxuan/closeable-map/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/piotr-yuxuan/closeable-map)](https://github.com/piotr-yuxuan/closeable-map/issues)
 
-This small library defines a new type of Clojure map that represents
-an execution context, and that you can close. When passed to
-`with-open`, its closeable values will be closed. You can also use an
-optional key `:close` to define your own close function, or a
-collection of such functions.
-
-It is a tiny alternative to more capable projects:
+This small library defines a new type of Clojure that you can
+close. It is a tiny alternative to more capable projects:
 - Application state management:
   [stuartsierra/component](https://github.com/stuartsierra/component),
   [weavejester/integrant](weavejester/integrant),
@@ -21,64 +16,64 @@ It is a tiny alternative to more capable projects:
 - Representing state in a map:
   [robertluo/fun-map](https://github.com/robertluo/fun-map)
 
-## TL;DR example
-
 ``` clojure
-;; in your project
-(require '[piotr-yuxuan/closeable-map :refer [closeable-map]])
+;; In your project, require:
+(require '[piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map] :as system])
 
 (defn start
   "Return a running context with values that can be closed."
   [config]
-  (closeable-map {:server (http/start-server (api context) {:port 3030})
-                  :producer (kafka-producer config)
-                  :consumer (kafka-consumer config)}))
+  (closeable-map
+    {;; Kafka producers/consumers are `java.io.Closeable`.
+     :producer (kafka-producer config)
+     :consumer (kafka-consumer config)
 
-;; in test file
-(with-open [context (start config)]
+     ;; File streams are `java.io.Closeable` too:
+     :outfile (io/output-stream (io/file "/tmp/outfile.txt"))
+
+     ;; Closeable-maps can be nested. Also, you can choose to ignore
+     ;; errors either for the root map, or a nested map:
+     :db ^:closeable-map/ignore-errors {:db-conn (jdbc/get-connection (:db config))}
+
+     ;; Some libs return a function which when called stop the server, like:
+     :server ^::system/fn (http/start-server (api config) (:server config))}))
+
+
+;; Then you can start/stop the app in the repl with:
+(comment
+  (def config (load-config))
+  (def system (start config))
+
+  ;; Stop/close all processes/resources with:
+  (.close system)
+)
+
+
+;; You can use it in conjunction with `with-open` like in test file:
+(with-open [system (start config)]
   (testing "unit test with isolated, repeatable context"
     (is (= :yay/🚀 (some-business/function context)))))
 ```
 
-Syntactic sugar:
+When `(.close system)` is executed, it will:
 
-``` clojure
-(require '[piotr-yuxuan/closeable-map :refer [closeable-hash-map]])
+  - Recursively close all instances of `java.io.Closeable` and `java.lang.AutoCloseable`;
+  - Recursively call all stop functions tagged with `^::system/fn`;
+  - Skip all `Closeable` tagged with `^::system/ignore`;
+  - If the key `::system/on-close` is present, it will be assumed
+    as a function which takes one argument (the map itself) and used
+    run additional closing logic.
+    ``` clojure
+    (closeable-map
+      {;; Kafka producers/consumers are java.io.Closeable
+       :producer (kafka-producer config)
+       :consumer (kafka-consumer config)
 
-(defn start
-  "Return a running context with values that can be closed."
-  [config]
-  (closeable-hash-map
-    :server (http/start-server (api context) {:port 3030})
-    :producer (kafka-producer config)
-    :consumer (kafka-consumer config)))
-```
-
-Nested closeable contexts, custom closeable values, and ignored items:
-
-``` clojure
-(require '[piotr-yuxuan/closeable-map :refer [closeable-hash-map] :as ctx])
-
-(defn start
-  "Return a running context with values that can be closed."
-  [config]
-  (closeable-hash-map
-    ;; Some libraries like http-kit don't return an instance of
-    ;; Closeable but a zero-arg function to stop a process.
-    :server ^::ctx/fn (http-kit/run-server {:port 3030})
-    :producer (kafka-producer config)
-    ;; This library will walk through all nested values and try to
-    ;; stop them.
-    :processes {:file-watcher (let [stop-function (fs/watch {})]
-                                ^::ctx/fn (fn [] (stop-function)))
-                :bitcoin-miner (let [stop-function (boil/oceans! {})]
-                                 ^::ctx/fn (fn [] (stop-function)))
-                ;; some additional logic to stop all processes.
-                ::ctx/close (fn [_nested-context] (flush-to-disk!))}
-    ;; Some nested execution context values may be very large. You can
-    ;; tell it to ignore some values.
-    :large-shop-history ^::ctx/ignore {}))
-```
+       ;; this function will be executed before the auto close.
+       ::system/on-close (fn [this-map] (flush!))
+       }
+    )
+    ```
 
 ## Technicalities
 
