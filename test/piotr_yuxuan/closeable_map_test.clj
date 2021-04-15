@@ -13,6 +13,7 @@
              :nested-vector [(reify Closeable (close [_]))]
              ::closeable-map/after-close (fn [_])}]
       (is (= m (closeable-map/visitor m)))))
+
   (testing "ignore"
     (let [log (atom ::untouched)]
       (is nil? (closeable-map/visitor
@@ -55,6 +56,7 @@
               ::after-nested-close
               ::nested-vector
               ::after-close]))))
+
   (testing "before / after"
     (let [log (atom [])]
       (closeable-map/visitor
