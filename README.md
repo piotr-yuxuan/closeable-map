@@ -18,12 +18,12 @@ close. It is a tiny alternative to more capable projects:
 
 ``` clojure
 ;; In your project, require:
-(require '[piotr-yuxuan.closeable-map :refer [closeable-map closeable-hash-map] :as system])
+(require '[piotr-yuxuan.closeable-map :as closeable-map])
 
 (defn start
   "Return a running context with values that can be closed."
   [config]
-  (closeable-map
+  (closeable-map/closeable-map
     {;; Kafka producers/consumers are `java.io.Closeable`.
      :producer (kafka-producer config)
      :consumer (kafka-consumer config)
@@ -31,12 +31,11 @@ close. It is a tiny alternative to more capable projects:
      ;; File streams are `java.io.Closeable` too:
      :outfile (io/output-stream (io/file "/tmp/outfile.txt"))
 
-     ;; Closeable-maps can be nested. Also, you can choose to ignore
-     ;; errors either for the root map, or a nested map:
-     :db ^:closeable-map/ignore-errors {:db-conn (jdbc/get-connection (:db config))}
+     ;; Closeable-maps can be nested.
+     :db {:db-conn (jdbc/get-connection (:db config))}
 
      ;; Some libs return a function which when called stop the server, like:
-     :server ^::system/fn (http/start-server (api config) (:server config))}))
+     :server ^::closeable-map/fn (http/start-server (api config) (:server config))}))
 
 
 ;; Then you can start/stop the app in the repl with:
@@ -58,19 +57,22 @@ close. It is a tiny alternative to more capable projects:
 When `(.close system)` is executed, it will:
 
   - Recursively close all instances of `java.io.Closeable` and `java.lang.AutoCloseable`;
-  - Recursively call all stop functions tagged with `^::system/fn`;
-  - Skip all `Closeable` tagged with `^::system/ignore`;
-  - If the key `::system/on-close` is present, it will be assumed
+  - Recursively call all stop functions tagged with `^::closeable-map/fn`;
+  - Skip all `Closeable` tagged with `^::closeable-map/ignore`;
+  - If keys `::closeable-map/before-close` or `::closeable-map/before-close` are present, they will be assumed
     as a function which takes one argument (the map itself) and used
     run additional closing logic.
     ``` clojure
     (closeable-map
-      {;; Kafka producers/consumers are java.io.Closeable
+      {;; This function will be executed before the auto close.
+       ::closeable-map/before-close (fn [this-map] (flush!))
+
+       ;; Kafka producers/consumers are java.io.Closeable
        :producer (kafka-producer config)
        :consumer (kafka-consumer config)
 
-       ;; this function will be executed before the auto close.
-       ::system/on-close (fn [this-map] (flush!))
+       ;; This function will be executed after the auto close.
+       ::closeable-map/after-close (fn [this-map] (garbage/collect!))
        }
     )
     ```
