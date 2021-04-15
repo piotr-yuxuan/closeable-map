@@ -6,18 +6,38 @@
            (java.lang AutoCloseable)
            (java.util Map)))
 
-(defn close-if-closeable!
+(defn close!
+  "FIXME cljdoc"
   [form]
   ;; AutoCloseable is a superinterface of Closeable.
   (cond (instance? AutoCloseable form) (.close ^AutoCloseable form)
-        (::fn (meta form)) (let [thunk form] (thunk)))
+        (::fn (meta form)) (let [thunk form] (thunk))))
 
-  (when-let [m (and (instance? Map form) ^Map form)]
-    (when-let [close (get m ::close)]
-      (cond (sequential? close) (run! #(% m) close)
-            (fn? close) (close m)
-            :else (throw (ex-info "close must be a function, or a sequence of functions" {:m m})))))
-  form)
+(def visitor
+  "FIXME cljdoc"
+  ;; No checks on closing functions. You may pass a keyword for advanced use case with lazy maps.
+  (letfn [(before-close [x] (when-let [close! (or (and (instance? Map x)
+                                                       (::before-close x))
+                                                  (::before-close (meta x)))]
+                              (close! x)))
+          (after-close [x] (when-let [close! (or (and (instance? Map x)
+                                                      (::after-close x))
+                                                 (::after-close (meta x)))]
+                             (close! x)))
+          #_(swallow [x f]
+                     (if (get (meta x) ::swallow)
+                       (try (f x)
+                            (catch Throwable _)
+                            (finally x))
+                       (doto x f)))
+          (ignore [x] (when-not (get (meta x) ::ignore) x))]
+    (fn visitor [form]
+      (walk/walk visitor
+                 #(doto %
+                    close!
+                    after-close)
+                 (doto (ignore form)
+                   before-close)))))
 
 (def-map-type CloseableMap [m mta]
   (get [_ k default-value] (get m k default-value))
@@ -28,17 +48,9 @@
   (with-meta [_ mta] (CloseableMap. m mta))
 
   Closeable ;; Closeable is a subinterface of AutoCloseable.
-  (^void close [this] (walk/prewalk
-                        (fn [form]
-                          (when-not (::ignore (meta form))
-                            (close-if-closeable! form)))
-                        m)))
+  (^void close [this] (visitor m) nil))
 
 (defn ^Closeable closeable-map
-  ([m] {:pre [(instance? Map {})]} (closeable-map m (meta m)))
-  ([m mta] {:pre [(instance? Map {})]} (CloseableMap. m mta)))
-
-(defn ^Closeable closeable-hash-map
-  [& keyvals]
-  {:pre [(even? (count keyvals))]}
-  (closeable-map (apply hash-map keyvals)))
+  [m]
+  {:pre [(instance? Map m)]}
+  (CloseableMap. m (meta m)))
