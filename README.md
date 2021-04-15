@@ -31,7 +31,7 @@ close. It is a tiny alternative to more capable projects:
      ;; File streams are `java.io.Closeable` too:
      :outfile (io/output-stream (io/file "/tmp/outfile.txt"))
 
-     ;; Closeable-maps can be nested.
+     ;; Closeable maps can be nested.
      :db {:db-conn (jdbc/get-connection (:db config))}
 
      ;; Some libs return a function which when called stop the server, like:
@@ -61,7 +61,7 @@ When `(.close system)` is executed, it will:
   - Skip all `Closeable` tagged with `^::closeable-map/ignore`;
   - If keys `::closeable-map/before-close` or `::closeable-map/before-close` are present, they will be assumed
     as a function which takes one argument (the map itself) and used
-    run additional closing logic.
+    run additional closing logic:
     ``` clojure
     (closeable-map
       {;; This function will be executed before the auto close.
