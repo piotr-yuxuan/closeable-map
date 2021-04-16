@@ -9,7 +9,7 @@ Then you can define an application that can be started, and closed.
 
 ``` clojure
 (defn start
-  "Return a running context with values that can be closed."
+  \"Return a running context with values that can be closed.\"
   [config]
   (closeable-map/closeable-map
     {;; Kafka producers/consumers are `java.io.Closeable`.
@@ -21,7 +21,7 @@ Then you can define an application that can be started, and closed.
                    :connection-pool (http/connection-pool {:pool-opts config})
 
                    ;; File streams are `java.io.Closeable` too:
-                   :logfile (io/output-stream (io/file "/tmp/log.txt"))
+                   :logfile (io/output-stream (io/file \"/tmp/log.txt\"))
 
                    ;; This will be called as final closing step for
                    ;; this nested map backend/api. See also
