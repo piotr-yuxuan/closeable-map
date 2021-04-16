@@ -9,21 +9,52 @@ Then you can define an application that can be started, and closed.
 
 ``` clojure
 (defn start
-  \"Return a running context with values that can be closed.\"
+  "Return a running context with values that can be closed."
   [config]
   (closeable-map/closeable-map
     {;; Kafka producers/consumers are `java.io.Closeable`.
      :producer (kafka-producer config)
      :consumer (kafka-consumer config)
 
-     ;; File streams are `java.io.Closeable` too:
-     :outfile (io/output-stream (io/file \"/tmp/outfile.txt\"))
-
      ;; Closeable maps can be nested.
-     :db {:db-conn (jdbc/get-connection (:db config))}
+     :backend/api {:response-executor (flow/utilization-executor (:executor config))
+                   :connection-pool (http/connection-pool {:pool-opts config})
 
-     ;; Some libs return a zero-argument function which when called stops the server, like:
-     :server ^::closeable-map/fn (http/start-server (api config) (:server config))}))
+                   ;; File streams are `java.io.Closeable` too:
+                   :logfile (io/output-stream (io/file "/tmp/log.txt"))
+
+                   ;; This will be called as final closing step for
+                   ;; this nested map backend/api. See also
+                   ;; `::closeable-map/before-close` which is called
+                   ;; before closing a map.
+                   ::closeable-map/after-close
+                   (fn [m]
+                     ;; Some classes have similar semantic, but do not
+                     ;; implement `java.io.Closeable`. We can handle
+                     ;; them anyway.
+                     (.shutdown ^ExecutorService (:response-executor m))
+                     (.shutdown ^IPool (:connection-pool m)))}
+
+     ;; Any exception when closing this nested map will be swallowed
+     ;; and not bubbled up.
+     :db ^::closeable-map/swallow {;; Connection are `java.io.Closeable`, too:
+                                   :db-conn (jdbc/get-connection (:db config))}
+
+     ;; Some libs return a zero-argument function which when called
+     ;; stops the server, like:
+     :server (with-meta
+               (http/start-server (api config) (:server config))
+               {::closeable-map/fn true})
+     ;; Gotcha: with-meta tag the stop function returned by
+     ;; `http/start-server`. By Clojure design, the shortcut
+     ;; `::closeable-map/fn (fn [])`
+     :forensic ^::closeable-map/fn #(metrics/report-death!)
+
+     ::closeable-map/ex-handler
+     (fn [ex]
+       ;; Will be called for all exceptions thrown when closing this
+       ;; map and nested items.
+       (println (ex-message ex)))}))
 ```
 
 Then you can start/stop the app in the repl with:
