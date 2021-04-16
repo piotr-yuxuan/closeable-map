@@ -6,6 +6,20 @@
            (java.lang AutoCloseable)
            (java.util Map)))
 
+(def ^:dynamic *swallow?*
+  "Dynamic var. If found bound to a logically true value in closing
+  thread, will swallow any `java.lang.Throwable`, the top class for
+  all exceptions in Java.
+
+  Because `clojure.walk/walk` is used for map traversal, it is not
+  possible to pass any closeable context as an argument. Also, as we
+  iteratively walk through nested datastructure, some of them do not
+  support metadata so we can't attach swallow to the children. As a
+  result, a binding on this dynamic var in the execution thread allows
+  for a simple way to remember the parent value as we visit the
+  children."
+  false)
+
 (defn close!
   "FIXME cljdoc"
   [form]
@@ -24,20 +38,21 @@
                                                       (::after-close x))
                                                  (::after-close (meta x)))]
                              (close! x)))
-          #_(swallow [x f]
-                     (if (get (meta x) ::swallow)
-                       (try (f x)
-                            (catch Throwable _)
-                            (finally x))
-                       (doto x f)))
+          (swallow [x f]
+            (if *swallow?*
+              (try (f x)
+                   (catch Throwable _)
+                   (finally x))
+              (doto x f)))
           (ignore [x] (when-not (get (meta x) ::ignore) x))]
     (fn visitor [form]
-      (walk/walk visitor
-                 #(doto %
-                    close!
-                    after-close)
-                 (doto (ignore form)
-                   before-close)))))
+      (binding [*swallow?* (or (::swallow (meta form) *swallow?*))]
+        (walk/walk visitor
+                   #(doto %
+                      (swallow close!)
+                      (swallow after-close))
+                   (doto (ignore form)
+                     (swallow before-close)))))))
 
 (def-map-type CloseableMap [m mta]
   (get [_ k default-value] (get m k default-value))
@@ -48,7 +63,7 @@
   (with-meta [_ mta] (CloseableMap. m mta))
 
   Closeable ;; Closeable is a subinterface of AutoCloseable.
-  (^void close [this] (visitor m) nil))
+  (^void close [this] (visitor m)))
 
 (defn ^Closeable closeable-map
   [m]

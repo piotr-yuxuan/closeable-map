@@ -85,6 +85,46 @@
                    ::nested-vector
                    ::after-nested-close]))))
 
+  (testing "swallow"
+    (let [log (atom [])
+          m ^::closeable-map/swallow {::closeable-map/before-close (fn [_]
+                                                                     (swap! log conj ::before-close)
+                                                                     (throw (ex-info "before-close" {})))
+                                      :closeable (reify Closeable (close [_]
+                                                                    (swap! log conj ::closeable)
+                                                                    (throw (ex-info "closeable" {}))))
+                                      :nested-map {:closeable (reify Closeable (close [_]
+                                                                                 (swap! log conj ::nested-map)
+                                                                                 (throw (ex-info "nested-map" {}))))}
+                                      :nested-vector [(reify Closeable (close [_]
+                                                                         (swap! log conj ::nested-vector)
+                                                                         (throw (ex-info "nested-vector" {}))))]
+                                      ::closeable-map/after-close (fn [_]
+                                                                    (swap! log conj ::after-close)
+                                                                    (throw (ex-info "after-close" {})))}]
+      (is (= m (closeable-map/visitor m)))
+      (is (= @log [::before-close
+                   ::closeable
+                   ::nested-map
+                   ::nested-vector
+                   ::after-close])))
+    (let [log (atom [])
+          m {::closeable-map/before-close (fn [_] (swap! log conj ::before-close))
+             :closeable (reify Closeable (close [_] (swap! log conj ::closeable)))
+             :nested-map ^::closeable-map/swallow {:closeable (reify Closeable (close [_]
+                                                                                 (swap! log conj ::nested-map)
+                                                                                 (throw (ex-info "nested-map" {}))))}
+             :nested-vector ^::closeable-map/swallow [(reify Closeable (close [_]
+                                                                         (swap! log conj ::nested-vector)
+                                                                         (throw (ex-info "nested-vector" {}))))]
+             ::closeable-map/after-close (fn [_] (swap! log conj ::after-close))}]
+      (is (= m (closeable-map/visitor m)))
+      (is (=  [::before-close
+                   ::closeable
+                   ::nested-map
+                   ::nested-vector
+                   ::after-close]))))
+
   (testing "fn"
     (let [log (atom nil)]
       (closeable-map/visitor
