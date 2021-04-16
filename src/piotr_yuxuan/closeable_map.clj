@@ -45,7 +45,8 @@ Then you can define an application that can be started, and closed.
      :server (with-meta
                (http/start-server (api config) (:server config))
                {::closeable-map/fn true})
-     ;; Gotcha: with-meta tag the stop function returned by
+
+     ;; Gotcha: `with-meta` tags the stop function returned by
      ;; `http/start-server`. By Clojure design, the shortcut
      ;; notation `^::closeable-map/fn (fn [])` works only on
      ;; direct objects, not on bindings, or unevaluated forms.
