@@ -190,9 +190,9 @@ When `(.close system)` is executed, it will:
           (?ex-handler [x] (cond (contains? (meta x) ::ex-handler) (::ex-handler (meta x))
                                  (and (instance? Map x) (contains? x ::ex-handler)) (::ex-handler x)
                                  :else *?ex-handler*))
-          (swallow? [x] (if (contains? (meta x) ::swallow)
-                          (::swallow (meta x))
-                          *swallow?*))
+          (swallow? [x] (cond (contains? (meta x) ::swallow) (::swallow (meta x))
+                              (and (instance? Map x) (contains? x ::swallow?)) (::swallow? x)
+                              :else *swallow?*))
           (swallow [x f] (if (or (swallow? x)
                                  (swallow? f))
                            (try (f x)
@@ -201,9 +201,9 @@ When `(.close system)` is executed, it will:
                                     (*?ex-handler* th)))
                                 (finally x))
                            (doto x f)))
-          (ignore? [x] (if (contains? (meta x) ::ignore)
-                         (::ignore (meta x))
-                         *ignore?*))]
+          (ignore? [x] (cond (contains? (meta x) ::ignore) (::ignore (meta x))
+                             (and (instance? Map x) (contains? x ::ignore?)) (::ignore? x)
+                             :else *ignore?*))]
     (fn visitor
       [x]
       (binding [*swallow?* (swallow? x)
