@@ -75,7 +75,8 @@ Then you can define an application that can be started, and closed.
                {::closeable-map/fn true})
      ;; Gotcha: with-meta tag the stop function returned by
      ;; `http/start-server`. By Clojure design, the shortcut
-     ;; `::closeable-map/fn (fn [])`
+     ;; notation `^::closeable-map/fn (fn [])` works only on
+     ;; direct objects, not on bindings, or unevaluated forms.
      :forensic ^::closeable-map/fn #(metrics/report-death!)
 
      ::closeable-map/ex-handler
