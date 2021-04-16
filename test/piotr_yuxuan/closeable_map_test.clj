@@ -1,7 +1,8 @@
 (ns piotr-yuxuan.closeable-map-test
   (:require [clojure.test :refer [deftest testing is]]
             [piotr-yuxuan.closeable-map :as closeable-map])
-  (:import (java.io Closeable)))
+  (:import (java.io Closeable)
+           (clojure.lang ExceptionInfo)))
 
 (deftest visitor-test
   (testing "return value when no ignore"
@@ -32,8 +33,7 @@
                                                   ::closeable-map/after-close (fn [_] (swap! log conj ::after-nested-close))}
              :nested-vector [(reify Closeable (close [_] (swap! log conj ::nested-vector)))]
              ::closeable-map/after-close (fn [_] (swap! log conj ::after-close))}]
-      (is (= (closeable-map/visitor m)
-             (assoc m :nested-map nil)))
+      (is (= m (closeable-map/visitor m)))
       (is (= @log
              [::before-close
               ::closeable
@@ -47,8 +47,7 @@
                           ::closeable-map/after-close (fn [_] (swap! log conj ::after-nested-close))}
              :nested-vector [(reify Closeable (close [_] (swap! log conj ::nested-vector)))]
              ::closeable-map/after-close (fn [_] (swap! log conj ::after-close))}]
-      (is (= (closeable-map/visitor m)
-             (assoc-in m [:nested-map :closeable] nil)))
+      (is (= m (closeable-map/visitor m)))
       (is (= @log
              [::before-close
               ::closeable
@@ -56,6 +55,18 @@
               ::after-nested-close
               ::nested-vector
               ::after-close]))))
+
+  (testing "nested ignore"
+    (let [log (atom [])
+          m {:a ^::closeable-map/ignore {:b-swallowed ^::closeable-map/fn #(swap! log conj ::ignored)
+                                         :b (vary-meta
+                                              {:c ^::closeable-map/fn #(swap! log conj ::closeable)}
+                                              assoc ::closeable-map/ignore false)
+                                         :b-shadowed ^::closeable-map/fn #(swap! log conj ::ignored)}}]
+      (try (closeable-map/visitor m)
+           (catch ExceptionInfo ex
+             (swap! log conj (ex-message ex))))
+      (is (= @log [::closeable]))))
 
   (testing "before / after"
     (let [log (atom [])]
@@ -83,7 +94,13 @@
       (is (= @log [::closeable
                    ::before-nested-close
                    ::nested-vector
-                   ::after-nested-close]))))
+                   ::after-nested-close])))
+    (let [log (atom {})
+          m {::closeable-map/before-close (fn [m] (swap! log assoc ::before-close m))
+             ::closeable-map/after-close (fn [m] (swap! log assoc ::after-close m))}]
+      (closeable-map/visitor m)
+      (is (= @log {::before-close m
+                   ::after-close m}))))
 
   (testing "swallow"
     (let [log (atom [])
@@ -110,7 +127,9 @@
                    ::after-close])))
     (let [log (atom [])
           m {::closeable-map/before-close (fn [_] (swap! log conj ::before-close))
-             :closeable (reify Closeable (close [_] (swap! log conj ::closeable)))
+             :closeable ^::closeable-map/swallow (reify Closeable (close [_]
+                                                                    (swap! log conj ::closeable)
+                                                                    (throw (ex-info "closeable" {}))))
              :nested-map ^::closeable-map/swallow {:closeable (reify Closeable (close [_]
                                                                                  (swap! log conj ::nested-map)
                                                                                  (throw (ex-info "nested-map" {}))))}
@@ -119,11 +138,67 @@
                                                                          (throw (ex-info "nested-vector" {}))))]
              ::closeable-map/after-close (fn [_] (swap! log conj ::after-close))}]
       (is (= m (closeable-map/visitor m)))
-      (is (=  [::before-close
+      (is (= @log [::before-close
                    ::closeable
                    ::nested-map
                    ::nested-vector
-                   ::after-close]))))
+                   ::after-close]))
+      @log)
+    (let [log (atom [])
+          m {::closeable-map/before-close ^::closeable-map/swallow (fn [_]
+                                                                     (swap! log conj ::before-close)
+                                                                     (throw (ex-info "before-close" {})))
+
+             :closeable ^::closeable-map/swallow (reify Closeable (close [_]
+                                                                    (swap! log conj ::closeable)
+                                                                    (throw (ex-info "closeable" {}))))
+
+             ::closeable-map/after-close ^::closeable-map/swallow (fn [_]
+                                                                    (swap! log conj ::after-close)
+                                                                    (throw (ex-info "after-close" {})))}]
+      (is (= m (closeable-map/visitor m)))
+      (is (= @log
+             [::before-close
+              ::closeable
+              ::after-close]))))
+
+  (testing "nested shallow"
+    (let [log (atom [])
+          m {:a ^::closeable-map/swallow {:b-swallowed ^::closeable-map/fn (fn []
+                                                                             (swap! log conj ::b-swallowed)
+                                                                             (throw (ex-info "b-swallowed" {})))
+                                          :b (vary-meta
+                                               {:c ^::closeable-map/fn (fn []
+                                                                         (swap! log conj ::c-closeable)
+                                                                         (throw (ex-info "c-exception" {})))}
+                                               assoc ::closeable-map/swallow false)
+                                          :b-shadowed ^::closeable-map/fn (fn []
+                                                                            (swap! log conj ::fail-shadowed)
+                                                                            (throw (ex-info "fail-shadowed" {})))}}]
+      (try (closeable-map/visitor m)
+           (catch ExceptionInfo ex
+             (swap! log conj (ex-message ex))))
+      (is (= @log [::b-swallowed ::c-closeable "c-exception"]))))
+
+  (testing "nested ex-handler"
+    (let [log (atom [])
+          m ^::closeable-map/swallow {::closeable-map/ex-handler (fn [ex] (swap! log conj (ex-message ex)))
+                                      :a {:b-swallowed ^::closeable-map/fn (fn []
+                                                                             (swap! log conj ::b-swallowed)
+                                                                             (throw (ex-info "b-swallowed" {})))
+                                          :b {:c ^::closeable-map/fn (fn []
+                                                                       (swap! log conj ::c-closeable)
+                                                                       (throw (ex-info "c-exception" {})))}
+                                          :b-shadowed ^::closeable-map/fn (fn []
+                                                                            (swap! log conj ::fail-shadowed)
+                                                                            (throw (ex-info "fail-shadowed" {})))}}]
+      (closeable-map/visitor m)
+      (is (= @log [::b-swallowed
+                   "b-swallowed"
+                   ::c-closeable
+                   "c-exception"
+                   ::fail-shadowed
+                   "fail-shadowed"]))))
 
   (testing "fn"
     (let [log (atom nil)]
