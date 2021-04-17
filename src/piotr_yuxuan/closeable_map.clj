@@ -263,3 +263,15 @@ When `(.close system)` is executed, it will:
   nested closeable may be no longer ignored if its metadata contain
   `{::ignore false}`. You may use it like any other map."
   (closeable-map ^::ignore {}))
+
+(defn data-reader-swallow
+  [x]
+  (vary-meta x assoc :piotr-yuxuan.closeable-map/swallow true))
+
+(defn data-reader-ignore
+  [x]
+  (vary-meta x assoc :piotr-yuxuan.closeable-map/ignore true))
+
+(defn data-reader-fn
+  [x]
+  (vary-meta x assoc :piotr-yuxuan.closeable-map/fn true))
