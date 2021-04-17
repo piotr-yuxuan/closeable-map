@@ -105,15 +105,21 @@ You can use it in conjunction with `with-open` like in test file:
 When `(.close system)` is executed, it will:
 
   - Recursively close all instances of `java.io.Closeable` and `java.lang.AutoCloseable`;
+
   - Recursively call all stop zero-argument functions tagged with `^::closeable-map/fn`;
+
   - Skip all nested `Closeable` under a `^::closeable-map/ignore`;
+
   - Silently swallow any exception with `^::closeable-map/swallow`;
+
   - Exceptions to optional `::closeable-map/ex-handler` in key or
     metadata;
+
   - If keys (or metadata) `::closeable-map/before-close` or
-    `::closeable-map/before-close` are present, they will be assumed as
+    `::closeable-map/after-close` are present, they will be assumed as
     a function which takes one argument (the map itself) and used run
     additional closing logic:
+
     ``` clojure
     (closeable-map
       {;; This function will be executed before the auto close.
@@ -127,6 +133,15 @@ When `(.close system)` is executed, it will:
        ::closeable-map/after-close (fn [this-map] (garbage/collect!))
       }
     )
+    ```
+
+  - You can easily extend this library by giving new dispatch values
+    to multimethod {{piotr-yuxuan.closeable-map/close!}. It is
+    dispatched on the concrete class of its argument.
+
+    ``` clojure
+    (import '(java.util.concurrent ExecutorService))
+    (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
     ```
 
 ## Technicalities

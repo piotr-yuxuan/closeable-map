@@ -77,15 +77,21 @@ You can use it in conjunction with `with-open` like in test file:
 When `(.close system)` is executed, it will:
 
   - Recursively close all instances of `java.io.Closeable` and `java.lang.AutoCloseable`;
+
   - Recursively call all stop zero-argument functions tagged with `^::closeable-map/fn`;
+
   - Skip all nested `Closeable` under a `^::closeable-map/ignore`;
+
   - Silently swallow any exception with `^::closeable-map/swallow`;
+
   - Exceptions to optional `::closeable-map/ex-handler` in key or
     metadata;
+
   - If keys (or metadata) `::closeable-map/before-close` or
-    `::closeable-map/before-close` are present, they will be assumed as
+    `::closeable-map/after-close` are present, they will be assumed as
     a function which takes one argument (the map itself) and used run
     additional closing logic:
+
     ``` clojure
     (closeable-map
       {;; This function will be executed before the auto close.
@@ -99,7 +105,17 @@ When `(.close system)` is executed, it will:
        ::closeable-map/after-close (fn [this-map] (garbage/collect!))
       }
     )
-    ```"
+    ```
+
+  - You can easily extend this library by giving new dispatch values
+    to multimethod {{piotr-yuxuan.closeable-map/close!}. It is
+    dispatched on the concrete class of its argument.
+
+    ``` clojure
+    (import '(java.util.concurrent ExecutorService))
+    (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
+    ```
+"
   (:require [clojure.data]
             [clojure.walk :as walk]
             [potemkin :refer [def-map-type]])
@@ -146,18 +162,27 @@ When `(.close system)` is executed, it will:
   as we visit the children."
   false)
 
-(defn close!
+(defmulti close!
   "Perform a side effect of the form `x` passed as argument and attempts
   to close it. If it doesn't know how to close it, does
   nothing. Functions tagged with `^::fn` are considered closeable as
   `java.io.Closeable` and `java.lang.AutoCloseable`.
 
-  Return its argument."
+  This multimethod is dispatched on the concrete class of its
+  argument. You can extend this method like any other multimethod.
+
+  ```
+  (import '(java.util.concurrent ExecutorService))
+
+  (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
+  ```"
+  class)
+
+(defmethod close! :default
   [x]
   ;; AutoCloseable is a superinterface of Closeable.
   (cond (instance? AutoCloseable x) (.close ^AutoCloseable x)
-        (::fn (meta x)) (x))
-  x)
+        (::fn (meta x)) (x)))
 
 (def visitor
   "Take a form `x` as one argument and traverse it while trying to
@@ -259,7 +284,7 @@ When `(.close system)` is executed, it will:
   `{::ignore false}`. You may use it like any other map."
   (closeable-map ^::ignore {}))
 
-(defmacro -with-tag
+(defmacro with-tag-
   "The code is the docstring:
   ``` clojure
   (defmacro -with-tag
@@ -287,4 +312,4 @@ When `(.close system)` is executed, it will:
   ;; => #:piotr-yuxuan.closeable-map{:fn true}
   ```"
   [tag x]
-  (-with-tag x tag))
+  (with-tag- x tag))
