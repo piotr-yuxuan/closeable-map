@@ -17,5 +17,4 @@ jobs:
       with:
         add: 'project.clj'
         message: 'Bump dependency versions'
-        pull_strategy: '--rebase'
         signoff: true
