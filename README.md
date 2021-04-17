@@ -141,7 +141,14 @@ When `(.close system)` is executed, it will:
 
     ``` clojure
     (import '(java.util.concurrent ExecutorService))
-    (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
+    (defmethod closeable-map/close! ExecutorService
+      [x]
+      (.shutdown ^ExecutorService x))
+
+    (import '(io.aleph.dirigiste IPool))
+    (defmethod closeable-map/close! IPool
+      [x]
+      (.shutdown ^IPool x))
     ```
 
 ## Technicalities

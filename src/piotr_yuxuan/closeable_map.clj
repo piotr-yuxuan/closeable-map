@@ -113,7 +113,14 @@ When `(.close system)` is executed, it will:
 
     ``` clojure
     (import '(java.util.concurrent ExecutorService))
-    (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
+    (defmethod closeable-map/close! ExecutorService
+      [x]
+      (.shutdown ^ExecutorService x))
+
+    (import '(io.aleph.dirigiste IPool))
+    (defmethod closeable-map/close! IPool
+      [x]
+      (.shutdown ^IPool x))
     ```
 "
   (:require [clojure.data]
@@ -171,10 +178,16 @@ When `(.close system)` is executed, it will:
   This multimethod is dispatched on the concrete class of its
   argument. You can extend this method like any other multimethod.
 
-  ```
+  ``` clojure
   (import '(java.util.concurrent ExecutorService))
+  (defmethod closeable-map/close! ExecutorService
+    [x]
+    (.shutdown ^ExecutorService x))
 
-  (defmethod closeable-map/close! ExecutorService (memfn ^ExecutorService destroy))
+  (import '(io.aleph.dirigiste IPool))
+  (defmethod closeable-map/close! IPool
+    [x]
+    (.shutdown ^IPool x))
   ```"
   class)
 
