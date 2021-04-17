@@ -4,7 +4,7 @@
   <groupId>piotr-yuxuan</groupId>
   <artifactId>closeable-map</artifactId>
   <packaging>jar</packaging>
-  <version>0.19.0</version>
+  <version>0.20.0</version>
   <name>closeable-map</name>
   <description>A Clojure map which implements java.io.Closeable</description>
   <url>https://github.com/piotr-yuxuan/closeable-map</url>
@@ -18,7 +18,7 @@
   </licenses>
   <scm>
     <url>https://github.com/piotr-yuxuan/closeable-map</url>
-    <tag>b43033b899c22f95401a4acb2c87cffa0f66d0fc</tag>
+    <tag>be23148bbdd1090571b010e511d7d9c32e04e2cc</tag>
   </scm>
   <build>
     <sourceDirectory>src</sourceDirectory>
