@@ -1,8 +1,7 @@
 name: Version
 
 on:
-  push:
-    branches: [ main ]
+  create:
     tags:
       - '*.*.*'
 
