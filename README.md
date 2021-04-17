@@ -30,7 +30,7 @@ capable projects:
 In your project, require:
 
 ``` clojure
-(require '[piotr-yuxuan.closeable-map :as closeable-map])
+(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [metadata-tag]])
 ```
 
 Then you can define an application that can be started, and closed.
@@ -70,14 +70,9 @@ Then you can define an application that can be started, and closed.
 
      ;; Some libs return a zero-argument function which when called
      ;; stops the server, like:
-     :server (with-meta
-               (http/start-server (api config) (:server config))
-               {::closeable-map/fn true})
-
-     ;; Gotcha: `with-meta` tags the stop function returned by
-     ;; `http/start-server`. By Clojure design, the shortcut
-     ;; notation `^::closeable-map/fn (fn [])` works only on
-     ;; direct objects, not on bindings, or unevaluated forms.
+     :server (metadata-tag ::closeable-map/fn (http/start-server (api config) (:server config)))
+     ;; Gotcha: Clojure meta data can only be attached on 'concrete'
+     ;; objects; they are lost on literal forms (see above).
      :forensic ^::closeable-map/fn #(metrics/report-death!)
 
      ::closeable-map/ex-handler

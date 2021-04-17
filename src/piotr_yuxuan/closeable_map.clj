@@ -2,7 +2,7 @@
   "In your project, require:
 
 ``` clojure
-(require '[piotr-yuxuan.closeable-map :as closeable-map])
+(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [metadata-tag]])
 ```
 
 Then you can define an application that can be started, and closed.
@@ -42,14 +42,9 @@ Then you can define an application that can be started, and closed.
 
      ;; Some libs return a zero-argument function which when called
      ;; stops the server, like:
-     :server (with-meta
-               (http/start-server (api config) (:server config))
-               {::closeable-map/fn true})
-
-     ;; Gotcha: `with-meta` tags the stop function returned by
-     ;; `http/start-server`. By Clojure design, the shortcut
-     ;; notation `^::closeable-map/fn (fn [])` works only on
-     ;; direct objects, not on bindings, or unevaluated forms.
+     :server (metadata-tag ::closeable-map/fn (http/start-server (api config) (:server config)))
+     ;; Gotcha: Clojure meta data can only be attached on 'concrete'
+     ;; objects; they are lost on literal forms (see above).
      :forensic ^::closeable-map/fn #(metrics/report-death!)
 
      ::closeable-map/ex-handler
@@ -264,18 +259,18 @@ When `(.close system)` is executed, it will:
   `{::ignore false}`. You may use it like any other map."
   (closeable-map ^::ignore {}))
 
-(defmacro assoc-meta
+(defmacro -metadata-tag
   "The code is the docstring:
   ``` clojure
-  (defmacro assoc-meta
+  (defmacro -metadata-tag
     \"The code is the docstring:\"
-    [x annotation]
-    `(vary-meta ~x assoc ~annotation true))
+    [x tag]
+    `(vary-meta ~x assoc ~tag true))
   ```"
-  [x annotation]
-  `(vary-meta ~x assoc ~annotation true))
+  [x tag]
+  `(vary-meta ~x assoc ~tag true))
 
-(defn -fn
+(defn metadata-tag
   "By design, the Clojure shortcut notation `^::closeable-map/fn {}`
   works only on direct objects, not on bindings, or literal forms. use
   this function to circumvent this limitation.
@@ -288,46 +283,8 @@ When `(.close system)` is executed, it will:
 
   (meta
     (let [a {}]
-      (closeable-map/-fn a)))
+      (metadata-tag ::closeable-map/fn a)))
   ;; => #:piotr-yuxuan.closeable-map{:fn true}
   ```"
-  [x]
-  (assoc-meta x ::fn))
-
-(defn -ignore
-  "By design, the Clojure shortcut notation `^::closeable-map/ignore {}`
-  works only on direct objects, not on bindings, or literal forms. use
-  this function to circumvent this limitation.
-
-  ``` clojure
-  (meta
-    (let [a {}]
-      ^::closeable-map/ignore a))
-  ;; => nil
-
-  (meta
-    (let [a {}]
-      (closeable-map/-ignore a)))
-  ;; => #:piotr-yuxuan.closeable-map{:ignore true}
-  ```"
-  [x]
-  (assoc-meta x ::ignore))
-
-(defn -swallow
-  "By design, the Clojure shortcut notation `^::closeable-map/swallow
-  {}` works only on direct objects, not on bindings, or literal
-  forms. use this function to circumvent this limitation.
-
-  ``` clojure
-  (meta
-    (let [a {}]
-      ^::closeable-map/swallow a))
-  ;; => nil
-
-  (meta
-    (let [a {}]
-      (closeable-map/-swallow a)))
-  ;; => #:piotr-yuxuan.closeable-map{:swallow true}
-  ```"
-  [x]
-  (assoc-meta x ::swallow))
+  [tag x]
+  (-metadata-tag x tag))
