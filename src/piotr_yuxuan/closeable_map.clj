@@ -264,14 +264,70 @@ When `(.close system)` is executed, it will:
   `{::ignore false}`. You may use it like any other map."
   (closeable-map ^::ignore {}))
 
-(defn data-reader-swallow
-  [x]
-  (vary-meta x assoc :piotr-yuxuan.closeable-map/swallow true))
+(defmacro assoc-meta
+  "The code is the docstring:
+  ``` clojure
+  (defmacro assoc-meta
+    \"The code is the docstring:\"
+    [x annotation]
+    `(vary-meta ~x assoc ~annotation true))
+  ```"
+  [x annotation]
+  `(vary-meta ~x assoc ~annotation true))
 
-(defn data-reader-ignore
-  [x]
-  (vary-meta x assoc :piotr-yuxuan.closeable-map/ignore true))
+(defn -fn
+  "By design, the Clojure shortcut notation `^::closeable-map/fn {}`
+  works only on direct objects, not on bindings, or literal forms. use
+  this function to circumvent this limitation.
 
-(defn data-reader-fn
+  ``` clojure
+  (meta
+    (let [a {}]
+      ^::closeable-map/fn a))
+  ;; => nil
+
+  (meta
+    (let [a {}]
+      (closeable-map/-fn a)))
+  ;; => #:piotr-yuxuan.closeable-map{:fn true}
+  ```"
   [x]
-  (vary-meta x assoc :piotr-yuxuan.closeable-map/fn true))
+  (assoc-meta x ::fn))
+
+(defn -ignore
+  "By design, the Clojure shortcut notation `^::closeable-map/ignore {}`
+  works only on direct objects, not on bindings, or literal forms. use
+  this function to circumvent this limitation.
+
+  ``` clojure
+  (meta
+    (let [a {}]
+      ^::closeable-map/ignore a))
+  ;; => nil
+
+  (meta
+    (let [a {}]
+      (closeable-map/-ignore a)))
+  ;; => #:piotr-yuxuan.closeable-map{:ignore true}
+  ```"
+  [x]
+  (assoc-meta x ::ignore))
+
+(defn -swallow
+  "By design, the Clojure shortcut notation `^::closeable-map/swallow
+  {}` works only on direct objects, not on bindings, or literal
+  forms. use this function to circumvent this limitation.
+
+  ``` clojure
+  (meta
+    (let [a {}]
+      ^::closeable-map/swallow a))
+  ;; => nil
+
+  (meta
+    (let [a {}]
+      (closeable-map/-swallow a)))
+  ;; => #:piotr-yuxuan.closeable-map{:swallow true}
+  ```"
+  [x]
+  (assoc-meta x ::swallow))

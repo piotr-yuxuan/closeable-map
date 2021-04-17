@@ -205,3 +205,11 @@
       (closeable-map/visitor
         {:closeable ^::closeable-map/fn (fn [] (reset! log ::reset!))})
       (is (= @log ::reset!)))))
+
+(deftest tag-test
+  (is (= (meta (let [a {}] (closeable-map/-fn a)))
+         #::closeable-map{:fn true}))
+  (is (= (meta (let [a {}] (closeable-map/-ignore a)))
+         #::closeable-map{:ignore true}))
+  (is (= (meta (let [a {}] (closeable-map/-swallow a)))
+         #::closeable-map{:swallow true})))
