@@ -2,7 +2,7 @@
   "In your project, require:
 
 ``` clojure
-(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [metadata-tag]])
+(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [with-tag]])
 ```
 
 Then you can define an application that can be started, and closed.
@@ -42,7 +42,7 @@ Then you can define an application that can be started, and closed.
 
      ;; Some libs return a zero-argument function which when called
      ;; stops the server, like:
-     :server (metadata-tag ::closeable-map/fn (http/start-server (api config) (:server config)))
+     :server (with-tag ::closeable-map/fn (http/start-server (api config) (:server config)))
      ;; Gotcha: Clojure meta data can only be attached on 'concrete'
      ;; objects; they are lost on literal forms (see above).
      :forensic ^::closeable-map/fn #(metrics/report-death!)
@@ -259,10 +259,10 @@ When `(.close system)` is executed, it will:
   `{::ignore false}`. You may use it like any other map."
   (closeable-map ^::ignore {}))
 
-(defmacro -metadata-tag
+(defmacro -with-tag
   "The code is the docstring:
   ``` clojure
-  (defmacro -metadata-tag
+  (defmacro -with-tag
     \"The code is the docstring:\"
     [x tag]
     `(vary-meta ~x assoc ~tag true))
@@ -270,7 +270,7 @@ When `(.close system)` is executed, it will:
   [x tag]
   `(vary-meta ~x assoc ~tag true))
 
-(defn metadata-tag
+(defn with-tag
   "By design, the Clojure shortcut notation `^::closeable-map/fn {}`
   works only on direct objects, not on bindings, or literal forms. use
   this function to circumvent this limitation.
@@ -283,8 +283,8 @@ When `(.close system)` is executed, it will:
 
   (meta
     (let [a {}]
-      (metadata-tag ::closeable-map/fn a)))
+      (with-tag ::closeable-map/fn a)))
   ;; => #:piotr-yuxuan.closeable-map{:fn true}
   ```"
   [tag x]
-  (-metadata-tag x tag))
+  (-with-tag x tag))

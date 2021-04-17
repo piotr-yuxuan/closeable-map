@@ -207,9 +207,9 @@
       (is (= @log ::reset!)))))
 
 (deftest tag-test
-  (is (= (meta (let [a {}] (closeable-map/metadata-tag ::closeable-map/fn a)))
+  (is (= (meta (let [a {}] (closeable-map/with-tag ::closeable-map/fn a)))
          #::closeable-map{:fn true}))
-  (is (= (meta (let [a {}] (closeable-map/metadata-tag ::closeable-map/ignore a)))
+  (is (= (meta (let [a {}] (closeable-map/with-tag ::closeable-map/ignore a)))
          #::closeable-map{:ignore true}))
-  (is (= (meta (let [a {}] (closeable-map/metadata-tag ::closeable-map/swallow a)))
+  (is (= (meta (let [a {}] (closeable-map/with-tag ::closeable-map/swallow a)))
          #::closeable-map{:swallow true})))
