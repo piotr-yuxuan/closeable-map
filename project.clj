@@ -35,7 +35,7 @@
   :plugins [[lein-ancient "0.7.1-SNAPSHOT"]] ; should be within tool, but don't accept it
   :aliases {"file-lint" ["with-profile" "tool" "bikeshed"] ; long lines, EOF, docstrings…
             "kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner" "--watch" "--fail-fast"] ; fast, random test runner
-            "licenses" ["with-profile" "tool" "licenses" ":csv"] ; > './doc/licenses'
+            "licenses" ["with-profile" "tool" "licenses" ":csv"] ; > './doc/licenses.csv'
             "mutation-testing" ["with-profile" "tool" "trampoline" "mutate"]
             "simple-lint" ["with-profile" "tool" "eastwood" "{:namespaces [:source-paths]}"]
             ;; Better linter as command-line tool `clj-kondo --lint src test`.
