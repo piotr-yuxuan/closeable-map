@@ -28,8 +28,10 @@
                               [mutant "0.2.0"] ; source: https://github.com/pithyless/mutant
                               [venantius/yagni "0.1.7"]]}
              :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.0.732"]]}]}
-  :deploy-repositories [["releases" :clojars]
-                        ["snapshots" :clojars]]
+  :deploy-repositories [["clojars" {:sign-releases false
+                                    :url "https://clojars.org/repo"
+                                    :username :env/CLOJARS_USERNAME
+                                    :password :env/CLOJARS_TOKEN}]]
   :plugins [[lein-ancient "0.7.1-SNAPSHOT"]] ; should be within tool, but don't accept it
   :aliases {"file-lint" ["with-profile" "tool" "bikeshed"] ; long lines, EOF, docstrings…
             "kaocha" ["with-profile" "+kaocha" "run" "-m" "kaocha.runner" "--watch" "--fail-fast"] ; fast, random test runner
