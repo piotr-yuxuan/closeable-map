@@ -15,10 +15,10 @@
   :profiles {:dev {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=true"]}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
                               "-Dclojure.compiler.direct-linking=true"]}
-             :provided {:dependencies [[org.clojure/clojure "1.10.2"]]}
+             :provided {:dependencies [[org.clojure/clojure "1.10.3"]]}
              :tool {:global-vars {*warn-on-reflection* false} ; we don't care reflection in tooling code
                     :plugins [[lein-nomis-ns-graph "0.14.6"] ; must stay the first, see https://github.com/simon-katz/lein-nomis-ns-graph#troubleshooting
-                              [jonase/eastwood "0.3.14"]
+                              [jonase/eastwood "0.4.0"]
                               [lein-bikeshed "0.5.2"]
                               [lein-cloverage "1.2.2"]
                               [lein-kibit "0.1.8"]
@@ -27,7 +27,7 @@
                               [ns-sort "1.0.0"]
                               [mutant "0.2.0"] ; source: https://github.com/pithyless/mutant
                               [venantius/yagni "0.1.7"]]}
-             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.0.732"]]}]}
+             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.0.829"]]}]}
   :deploy-repositories [["clojars" {:sign-releases false
                                     :url "https://clojars.org/repo"
                                     :username :env/CLOJARS_USERNAME
