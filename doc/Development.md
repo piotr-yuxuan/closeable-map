@@ -11,8 +11,8 @@
 
 ## Usage
 
-Invoking the function provided by this library from the command-line. It
-returns an unimpressive map, which is what we expect:
+Invoking the function provided by this library from the
+command-line. It returns an unimpressive map, which is what we expect:
 
 ``` zsh
 clojure -X:run-x :arg '{:a 1}'
@@ -62,9 +62,14 @@ lein do clean, install
 
 ## GitHub Actions
 
-- Once a month, automatically tries to update dependencies and push a commit is tests pass.
-- When a tag is pushed to main branch, run tests, build, and deploy package to Clojars.
+- Once a month, automatically tries to update dependencies and push a
+  commit is tests pass.
+- When a tag is pushed to main branch, run tests, build, and deploy
+  package to Clojars.
 - When a commit is pushed to any branch, run tests.
+
+Repository secrets are used; see in repository settings how to add:
+`CLOJARS_USERNAME` and `CLOJARS_TOKEN`.
 
 ## Deploying a new version
 
