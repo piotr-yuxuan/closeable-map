@@ -50,8 +50,7 @@ clojure -M:graph/vars-svg
 Build a deployable jar of this library:
 
 ``` zsh
-lein pom
-clojure -X:jar
+lein jar
 ```
 
 This will update the generated `pom.xml` file to keep the dependencies
@@ -60,14 +59,12 @@ synchronized with your `deps.edn` file.
 Install it locally:
 
 ``` zsh
-lein pom
-clojure -X:install
+lein install
 ```
 
 Create a new version once a jar has been created:
 - Make sure all reasonable documentation is here
 - Update resources/closeable-map.version
-- `lein pom`
 - Create a commit with title `Version x.y.z`
 - Create a git tag
 
@@ -75,8 +72,7 @@ Deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD`
 environment variables (requires the `pom.xml` file):
 
 ``` zsh
-lein pom
-clojure -X:deploy
+lein clojars
 ```
 
 Deploy it to GitHub packages with [this
