@@ -40,7 +40,7 @@
             "simple-lint" ["with-profile" "tool" "eastwood" "{:namespaces [:source-paths]}"]
             ;; Better linter as command-line tool `clj-kondo --lint src test`.
             "static-analysis" ["with-profile" "tool" "kibit"] ; avoid code tautologies and so on
-            "dependency-versions" ["ancient" "upgrade" ":check-clojure" ":all"] ; bump dependency versions
+            "bump-dependency-versions" ["ancient" "upgrade" ":check-clojure" ":all"] ; bump dependency versions
             "test-coverage" ["with-profile" "tool" "cloverage"]
             "unused-code" ["with-profile" "tool" "yagni"]
             "ns-sort" ["with-profile" "tool" "ns-sort"]
