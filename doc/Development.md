@@ -50,11 +50,8 @@ clojure -M:graph/vars-svg
 Build a deployable jar of this library:
 
 ``` zsh
-lein jar
+lein do clean, jar
 ```
-
-This will update the generated `pom.xml` file to keep the dependencies
-synchronized with your `deps.edn` file.
 
 Install it locally:
 
@@ -68,11 +65,9 @@ Create a new version once a jar has been created:
 - Create a commit with title `Version x.y.z`
 - Create a git tag
 
-Deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD`
-environment variables (requires the `pom.xml` file):
-
 ``` zsh
-lein clojars
+lein do clean, test, jar
+lein deploy clojars
 ```
 
 Deploy it to GitHub packages with [this
