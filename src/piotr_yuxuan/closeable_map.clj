@@ -108,7 +108,7 @@ When `(.close system)` is executed, it will:
     ```
 
   - You can easily extend this library by giving new dispatch values
-    to multimethod {{piotr-yuxuan.closeable-map/close!}. It is
+    to multimethod [[piotr-yuxuan.closeable-map/close!]]. It is
     dispatched on the concrete class of its argument.
 
     ``` clojure
@@ -199,7 +199,7 @@ When `(.close system)` is executed, it will:
 
 (def visitor
   "Take a form `x` as one argument and traverse it while trying to
-  {{close!}} inner items.
+  [[piotr-yuxuan.closeable-map/close!]] inner items.
 
   Map keys `::before-close` and `::after-close` will be invoked before
   and after other keys of the map. Will ignore items marked with

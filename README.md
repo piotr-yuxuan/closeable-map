@@ -136,7 +136,7 @@ When `(.close system)` is executed, it will:
     ```
 
   - You can easily extend this library by giving new dispatch values
-    to multimethod {{piotr-yuxuan.closeable-map/close!}. It is
+    to multimethod [[piotr-yuxuan.closeable-map/close!]]. It is
     dispatched on the concrete class of its argument.
 
     ``` clojure
