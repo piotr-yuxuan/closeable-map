@@ -1,0 +1,21 @@
+name: Bump dependency versions
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "0 * 30 * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: lein deps
+    - run: lein bump-dependency-versions
+    - uses: EndBug/add-and-commit@v7.1.2
+      with:
+        add: 'project.clj'
+        message: 'Bump dependency versions'
+        pull_strategy: '--rebase'
+        signoff: true
