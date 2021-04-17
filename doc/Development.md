@@ -7,6 +7,7 @@
 - `deps.edn` reference: <https://clojure.org/reference/deps_and_cli>
 - Tools and how-to guides: <https://practicalli.github.io/clojure/>
 - Leiningen manual: <https://github.com/technomancy/leiningen>
+- GitHub actions: <https://docs.github.com/en/actions>
 
 ## Usage
 
@@ -56,19 +57,22 @@ lein do clean, jar
 Install it locally:
 
 ``` zsh
-lein install
+lein do clean, install
 ```
+
+## GitHub Actions
+
+- Once a month, automatically tries to update dependencies and push a commit is tests pass.
+- When a tag is pushed to main branch, run tests, build, and deploy package to Clojars.
+- When a commit is pushed to any branch, run tests.
+
+## Deploying a new version
 
 Create a new version once a jar has been created:
 - Make sure all reasonable documentation is here
 - Update resources/closeable-map.version
 - Create a commit with title `Version x.y.z`
-- Create a git tag
-
-``` zsh
-lein do clean, test, jar
-lein deploy clojars
-```
+- Create a git tag and push it; see GitHub action
 
 Deploy it to GitHub packages with [this
 guide](https://docs.github.com/en/packages/guides/configuring-apache-maven-for-use-with-github-packages)
@@ -77,14 +81,3 @@ and:
 ``` zsh
 mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/piotr-yuxuan/closeable-map
 ```
-
-## Notes on `pom.xml`
-
-If you don't plan to install/deploy the library, you can remove the
-`pom.xml` file but you will also need to remove `:sync-pom true` from
-the `deps.edn` file (in the `:exec-args` for `depstar`).
-
-As of now it is suggested to run `lein pom` to update the pom before
-installing a jar or deploying a new version, so that the file `pom.xml`
-is correctly updated by Leiningen (especially the scm revision), which I
-don't know yet how to do with `deps.edn` tooling.
