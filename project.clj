@@ -44,7 +44,7 @@
             "test-coverage" ["with-profile" "tool" "cloverage"]
             "unused-code" ["with-profile" "tool" "yagni"]
             "ns-sort" ["with-profile" "tool" "ns-sort"]
-            "vulnerabilities" ["with-profile" "tool" "nvd" "check"] ; > ./doc/KNOWN_VULNERABILITIES.log
+            "vulnerabilities" ["with-profile" "tool" "nvd" "check"] ; > ./doc/KNOWN_VULNERABILITIES.md
             "viz-dependency-tree" ["with-profile" "tool" "do"
                                    "nomis-ns-graph" ":show-non-project-deps" "false" ":filename" "./doc/namespaces,"
                                    "nomis-ns-graph" ":show-non-project-deps" "true" ":filename" "./doc/dependencies"]})

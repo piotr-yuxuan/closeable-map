@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: lein deps
       - run: lein bump-dependency-versions
-      - run: lein vulnerabilities > ./doc/KNOWN_VULNERABILITIES.log
+      - run: lein vulnerabilities > ./doc/KNOWN_VULNERABILITIES.md
       - run: lein licenses > './doc/licenses.csv'
       - uses: EndBug/add-and-commit@v7.1.2
         with:
