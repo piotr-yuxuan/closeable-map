@@ -1,0 +1,26 @@
+# This file is updated on each run by Walter CI.
+# There is no need to update it manually.
+name: Walter CI
+on:
+  push:
+    branches: '*'
+  schedule:
+    - cron: "0 0 1 * *"
+jobs:
+  walter-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.8.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@main
+      - uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+          WALTER_CLOJARS_PASSWORD: ${{ secrets.WALTER_CLOJARS_PASSWORD }}
+          WALTER_CLOJARS_USERNAME: ${{ secrets.WALTER_CLOJARS_USERNAME }}
+          WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
