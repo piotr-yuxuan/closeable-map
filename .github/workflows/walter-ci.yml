@@ -1,23 +1,29 @@
 # This file is updated on each run by Walter CI.
 # There is no need to update it manually.
+---
 name: Walter CI
 on:
   push:
     branches: '*'
+  # Scheduled run can perform heavier tasks like vulnerability check.
   schedule:
-    - cron: "0 0 1 * *"
+    # This cron expression means a run every Monday at 6.28 am.
+    - cron: "28 6 * * 1"
 jobs:
   walter-ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.8.0
-        with:
-          access_token: ${{ github.token }}
+      # - uses: styfle/cancel-workflow-action@0.8.0
+      #   with:
+      #     access_token: ${{ github.token }}
       - uses: actions/checkout@main
-      - uses: DeLaGuardo/setup-clojure@master
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
         with:
           cli: latest
           lein: latest
+      - name: Print environment variables
+        run: env
       - uses: piotr-yuxuan/walter-ci@main
         env:
           WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
