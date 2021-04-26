@@ -2,17 +2,12 @@ name: Walter CI
 on:
   push:
     branches: '*'
-  # Scheduled run can perform heavier tasks like vulnerability check.
   schedule:
-    # This cron expression means a run every Monday at 6.28 am.
-    - cron: "28 6 * * 1"
+    - cron: "28 6 * * *"
 jobs:
   walter-ci:
     runs-on: ubuntu-latest
     steps:
-      # - uses: styfle/cancel-workflow-action@0.8.0
-      #   with:
-      #     access_token: ${{ github.token }}
       - uses: actions/checkout@main
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@master
@@ -21,6 +16,11 @@ jobs:
           lein: latest
       - name: Print environment variables
         run: env
+      - name: Code style
+        uses: DeLaGuardo/clojure-lint-action@f712330e03eec4daa36da7045213190083aca4dd
+        with:
+          clj-kondo-args: --lint src
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Walter CI
         uses: piotr-yuxuan/walter-ci@main
         env:
