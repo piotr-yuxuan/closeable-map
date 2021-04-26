@@ -24,7 +24,8 @@ jobs:
           lein: latest
       - name: Print environment variables
         run: env
-      - uses: piotr-yuxuan/walter-ci@main
+      - name: Walter CI
+        uses: piotr-yuxuan/walter-ci@main
         env:
           WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
           WALTER_CLOJARS_PASSWORD: ${{ secrets.WALTER_CLOJARS_PASSWORD }}
