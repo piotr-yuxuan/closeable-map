@@ -1,6 +1,3 @@
-# This file is updated on each run by Walter CI.
-# There is no need to update it manually.
----
 name: Walter CI
 on:
   push:
