@@ -35,7 +35,7 @@ In your project, require:
 
 Define an application that can be started, and closed.
 
-```
+``` clojure
 (defn start
   "Return a map describing a running application, and which values may
   be closed."
@@ -66,6 +66,9 @@ well-contained, independent tests:
   (testing "unit test with isolated, repeatable context"
     (is (= :yay/🚀 (some-business/function consumer)))))
 ```
+
+You could also use thi library while live-coding to stop and restart
+your application whenever a file is changed.
 
 ## More details
 
@@ -200,24 +203,9 @@ open maps:
 (closeable-map/with-closeable [server (http/start-server (api config))
                                consumer (kafka-consumer config)
                                producer (throw (ex-info "Exception" {}))]
-                (closeable-map/closeable-map {:server server
-                                              :kafka {:consumer consumer
-                                                      :producer producer}}))
-;; `consumer` is closed, then `server` is closed, and finally the
-;; exception is bubbled up.
-;; => (ex-info "Exception" {})
-```
-
-Use `with-closeable` to remediate this situation. It prevents broken,
-partially open maps:
-
-``` clojure
-(closeable-map/with-closeable [server (http/start-server (api config))
-                               consumer (kafka-consumer config)
-                               producer (throw (ex-info "Exception" {}))]
-                (closeable-map/closeable-map {:server server
-                                              :kafka {:consumer consumer
-                                                      :producer producer}}))
+  (closeable-map/closeable-map {:server server
+                                :kafka {:consumer consumer
+                                        :producer producer}}))
 ;; `consumer` is closed, then `server` is closed, and finally the
 ;; exception is bubbled up.
 ;; => (ex-info "Exception" {})

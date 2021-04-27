@@ -7,7 +7,7 @@
 
 Define an application that can be started, and closed.
 
-```
+``` clojure
 (defn start
   \"Return a map describing a running application, and which values may
   be closed.\"
@@ -38,6 +38,9 @@ well-contained, independent tests:
   (testing \"unit test with isolated, repeatable context\"
     (is (= :yay/🚀 (some-business/function consumer)))))
 ```
+
+You could also use thi library while live-coding to stop and restart
+your application whenever a file is changed.
 
 ## More details
 
@@ -145,6 +148,38 @@ the concrete class of its argument:
 (defmethod closeable-map/close! IPool
   [x]
   (.shutdown ^IPool x))
+
+## All or nothing: opening a map atomically
+
+In some circumstances you may need to handle exception on the creation
+of a closeable map. If an exception happens during the creation of the
+map, values already evaluated will be closed. No closeable objects
+will be left open with no references to them.
+
+For instance, this form would throw an exception:
+
+``` clojure
+(closeable-map/closeable-map {:server (http/start-server (api config))
+                              :kafka {:consumer (kafka-consumer config)
+                                      :producer (throw (ex-info \"Exception\" {}))}})
+;; => (ex-info \"Exception\" {})
+```
+
+The problem is: `consumer` and `server` stay open but with no
+references. Kafka messages keep being consumed and the port stays
+locked. Using `with-closeable` prevents that kind of broken, partially
+open maps:
+
+``` clojure
+(closeable-map/with-closeable [server (http/start-server (api config))
+                               consumer (kafka-consumer config)
+                               producer (throw (ex-info \"Exception\" {}))]
+  (closeable-map/closeable-map {:server server
+                                :kafka {:consumer consumer
+                                        :producer producer}}))
+;; `consumer` is closed, then `server` is closed, and finally the
+;; exception is bubbled up.
+;; => (ex-info \"Exception\" {})
 ```"
   (:require [clojure.data]
             [clojure.walk :as walk]
