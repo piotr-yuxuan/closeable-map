@@ -16,6 +16,11 @@ jobs:
           lein: latest
       - name: Print environment variables
         run: env
+#      - name: Code style
+#        uses: DeLaGuardo/clojure-lint-action@f712330e03eec4daa36da7045213190083aca4dd
+#        with:
+#          clj-kondo-args: --lint src
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Walter CI
         uses: piotr-yuxuan/walter-ci@main
         env:
