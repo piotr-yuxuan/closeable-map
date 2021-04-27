@@ -30,38 +30,67 @@ capable projects:
 In your project, require:
 
 ``` clojure
-(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [with-tag]])
+(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [close-with with-tag]])
 ```
 
-Then you can define an application that can be started, and closed.
+Define an application that can be started, and closed.
+
+```
+(defn start
+  "Return a map describing a running application, and which values may
+  be closed."
+  [config]
+  (closeable-map/closeable-map
+    {;; Kafka producers/consumers are `java.io.Closeable`.
+     :producer (kafka-producer config)
+     :consumer (kafka-consumer config)}))
+```
+
+You can start/stop the app in the repl with:
+
+``` clojure
+(comment
+  (def config (load-config))
+  (def system (start config))
+
+  ;; Stop/close all processes/resources with:
+  (.close system)
+)
+```
+
+It can be used in conjunction with `with-open` in test file to create
+well-contained, independent tests:
+
+``` clojure
+(with-open [{:keys [consumer] :as app} (start config)]
+  (testing "unit test with isolated, repeatable context"
+    (is (= :yay/🚀 (some-business/function consumer)))))
+```
+
+## More details
 
 ``` clojure
 (defn start
-  "Return a running context with values that can be closed."
+  "Return a map describing a running application, and which values may
+  be closed."
   [config]
   (closeable-map/closeable-map
     {;; Kafka producers/consumers are `java.io.Closeable`.
      :producer (kafka-producer config)
      :consumer (kafka-consumer config)
 
-     ;; Closeable maps can be nested.
-     :backend/api {:response-executor (flow/utilization-executor (:executor config))
-                   :connection-pool (http/connection-pool {:pool-opts config})
+     ;; File streams are `java.io.Closeable` too:
+     :logfile (io/output-stream (io/file "/tmp/log.txt"))
 
-                   ;; File streams are `java.io.Closeable` too:
-                   :logfile (io/output-stream (io/file "/tmp/log.txt"))
+     ;; Closeable maps can be nested. Nested maps will be closed before the outer map. 
+     :backend/api {:response-executor (close-with (memfn ^ExecutorService .shutdown)
+                                        (flow/utilization-executor (:executor config)))
+                   :connection-pool (close-with (memfn ^IPool .shutdown)
+                                      (http/connection-pool {:pool-opts config}))
 
-                   ;; This will be called as final closing step for
-                   ;; this nested map backend/api. See also
-                   ;; `::closeable-map/before-close` which is called
-                   ;; before closing a map.
-                   ::closeable-map/after-close
-                   (fn [m]
-                     ;; Some classes have similar semantic, but do not
-                     ;; implement `java.io.Closeable`. We can handle
-                     ;; them anyway.
-                     (.shutdown ^ExecutorService (:response-executor m))
-                     (.shutdown ^IPool (:connection-pool m)))}
+                   ;; These functions receive their map as argument.
+                   ::closeable-map/before-close (fn [m] (backend/give-up-leadership config m))
+                   ::closeable-map/after-close (fn [m] (backend/close-connection config m))}
 
      ;; Any exception when closing this nested map will be swallowed
      ;; and not bubbled up.
@@ -82,31 +111,13 @@ Then you can define an application that can be started, and closed.
        (println (ex-message ex)))}))
 ```
 
-Then you can start/stop the app in the repl with:
-
-``` clojure
-(comment
-  (def config (load-config))
-  (def system (start config))
-
-  ;; Stop/close all processes/resources with:
-  (.close system)
-)
-```
-
-You can use it in conjunction with `with-open` like in test file:
-
-``` clojure
-(with-open [system (start config)]
-  (testing "unit test with isolated, repeatable context"
-    (is (= :yay/🚀 (some-business/function context)))))
-```
-
 When `(.close system)` is executed, it will:
 
-  - Recursively close all instances of `java.io.Closeable` and `java.lang.AutoCloseable`;
+  - Recursively close all instances of `java.io.Closeable` and
+    `java.lang.AutoCloseable`;
 
-  - Recursively call all stop zero-argument functions tagged with `^::closeable-map/fn`;
+  - Recursively call all stop zero-argument functions tagged with
+    `^::closeable-map/fn`;
 
   - Skip all nested `Closeable` under a `^::closeable-map/ignore`;
 
@@ -135,21 +146,82 @@ When `(.close system)` is executed, it will:
     )
     ```
 
-  - You can easily extend this library by giving new dispatch values
-    to multimethod [[piotr-yuxuan.closeable-map/close!]]. It is
-    dispatched on the concrete class of its argument.
+Some classes do not implement `java.lang.AutoCloseable` but present
+some similar method. For example instances of
+`java.util.concurrent.ExecutorService` can't be closed but they can be
+`.shutdown`:
 
-    ``` clojure
-    (import '(java.util.concurrent ExecutorService))
-    (defmethod closeable-map/close! ExecutorService
-      [x]
-      (.shutdown ^ExecutorService x))
+``` clojure
+{:response-executor (close-with (memfn ^ExecutorService .shutdown)
+                      (flow/utilization-executor (:executor config)))
+ :connection-pool (close-with (memfn ^IPool .shutdown)
+                    (http/connection-pool {:pool-opts config}))}
+```
 
-    (import '(io.aleph.dirigiste IPool))
-    (defmethod closeable-map/close! IPool
-      [x]
-      (.shutdown ^IPool x))
-    ```
+You may also extend this library by giving new dispatch values to
+multimethod [[piotr-yuxuan.closeable-map/close!]]. Once evaluated,
+this will work accross all your code. The multimethod is dispatched on
+the concrete class of its argument:
+
+``` clojure
+(import '(java.util.concurrent ExecutorService))
+(defmethod closeable-map/close! ExecutorService
+  [x]
+  (.shutdown ^ExecutorService x))
+
+(import '(io.aleph.dirigiste IPool))
+(defmethod closeable-map/close! IPool
+  [x]
+  (.shutdown ^IPool x))
+```
+
+## All or nothing: opening a map atomically
+
+In some circumstances you may need to handle exception on the creation
+of a closeable map. If an exception happens during the creation of the
+map, values already evaluated will be closed. No closeable objects
+will be left open with no references to them.
+
+For instance, this form would throw an exception:
+
+``` clojure
+(closeable-map/closeable-map {:server (http/start-server (api config))
+                              :kafka {:consumer (kafka-consumer config)
+                                      :producer (throw (ex-info "Exception" {}))}})
+;; => (ex-info "Exception" {})
+```
+
+The problem is: `consumer` and `server` stay open but with no
+references. Kafka messages keep being consumed and the port stays
+locked. Using `with-closeable` prevents that kind of broken, partially
+open maps:
+
+``` clojure
+(closeable-map/with-closeable [server (http/start-server (api config))
+                               consumer (kafka-consumer config)
+                               producer (throw (ex-info "Exception" {}))]
+                (closeable-map/closeable-map {:server server
+                                              :kafka {:consumer consumer
+                                                      :producer producer}}))
+;; `consumer` is closed, then `server` is closed, and finally the
+;; exception is bubbled up.
+;; => (ex-info "Exception" {})
+```
+
+Use `with-closeable` to remediate this situation. It prevents broken,
+partially open maps:
+
+``` clojure
+(closeable-map/with-closeable [server (http/start-server (api config))
+                               consumer (kafka-consumer config)
+                               producer (throw (ex-info "Exception" {}))]
+                (closeable-map/closeable-map {:server server
+                                              :kafka {:consumer consumer
+                                                      :producer producer}}))
+;; `consumer` is closed, then `server` is closed, and finally the
+;; exception is bubbled up.
+;; => (ex-info "Exception" {})
+```
 
 ## Technicalities
 

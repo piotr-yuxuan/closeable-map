@@ -213,3 +213,50 @@
          #::closeable-map{:ignore true}))
   (is (= (meta (let [a {}] (closeable-map/with-tag ::closeable-map/swallow a)))
          #::closeable-map{:swallow true})))
+
+(deftest close-with-test
+  (let [log (atom nil)]
+    (closeable-map/close! (closeable-map/close-with
+                            (memfn ^Closeable .close)
+                            (reify Closeable
+                              (close [_]
+                                (swap! log conj ::close!)))))
+    (is (= [::close!] @log)))
+  (let [log (atom nil)]
+    (closeable-map/close! (closeable-map/close-with
+                            (fn [_] (swap! log conj ::close!))
+                            {:any :clojure-object}))
+    (is (= [::close!] @log))))
+
+(deftest with-closeable-test
+  (let [log (atom nil)]
+    ;; Keyword are not Clojure objects, arrays are.
+    (is (= (closeable-map/with-closeable [{:keys [first-key]} (closeable-map/close-with
+                                                                (fn [_] (swap! log conj :a/close!))
+                                                                {:first-key ::a})
+                                          [{:keys [second-key]}] (closeable-map/close-with
+                                                                   (fn [_] (swap! log conj :b/close!))
+                                                                   [{:second-key ::b}])
+                                          [third-key] (closeable-map/close-with
+                                                        (fn [_] (swap! log conj :c/close!))
+                                                        [::c])]
+             [first-key second-key third-key])
+           [::a ::b ::c]))
+    (is (not @log)))
+  (let [log (atom nil)]
+    (is (= (closeable-map/with-closeable [a (reify Closeable (close [_] (swap! log conj ::a)))
+                                          b (reify Closeable (close [_] (swap! log conj ::b)))
+                                          c (reify Closeable (close [_] (swap! log conj ::c)))]
+             :anything)
+           :anything))
+    (is (not @log)))
+  (let [log (atom [])
+        expected-ex (ex-info "expected" {})]
+    (try
+      (closeable-map/with-closeable [a (reify Closeable (close [_] (swap! log conj ::a)))
+                                     b (reify Closeable (close [_] (swap! log conj ::b)))
+                                     c (reify Closeable (close [_] (swap! log conj ::c)))]
+        (throw expected-ex))
+      (catch ExceptionInfo actual-ex
+        (swap! log conj actual-ex)))
+    (= [::c ::b ::a expected-ex] @log)))
