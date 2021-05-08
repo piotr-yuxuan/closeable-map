@@ -1,4 +1,5 @@
 (ns piotr-yuxuan.closeable-map
+  ;; Manually keep this description in sync with relevant parts of the README.
   "In your project, require:
 
 ``` clojure
@@ -27,7 +28,7 @@ You can start/stop the app in the repl with:
 
   ;; Stop/close all processes/resources with:
   (.close system)
-)
+  )
 ```
 
 It can be used in conjunction with `with-open` in test file to create
@@ -57,7 +58,7 @@ your application whenever a file is changed.
      ;; File streams are `java.io.Closeable` too:
      :logfile (io/output-stream (io/file \"/tmp/log.txt\"))
 
-     ;; Closeable maps can be nested. Nested maps will be closed before the outer map.
+     ;; Closeable maps can be nested. Nested maps will be closed before the outer map. 
      :backend/api {:response-executor (close-with (memfn ^ExecutorService .shutdown)
                                         (flow/utilization-executor (:executor config)))
                    :connection-pool (close-with (memfn ^IPool .shutdown)
@@ -90,17 +91,12 @@ When `(.close system)` is executed, it will:
 
   - Recursively close all instances of `java.io.Closeable` and
     `java.lang.AutoCloseable`;
-
   - Recursively call all stop zero-argument functions tagged with
     `^::closeable-map/fn`;
-
   - Skip all nested `Closeable` under a `^::closeable-map/ignore`;
-
   - Silently swallow any exception with `^::closeable-map/swallow`;
-
   - Exceptions to optional `::closeable-map/ex-handler` in key or
     metadata;
-
   - If keys (or metadata) `::closeable-map/before-close` or
     `::closeable-map/after-close` are present, they will be assumed as
     a function which takes one argument (the map itself) and used run
@@ -116,9 +112,7 @@ When `(.close system)` is executed, it will:
        :consumer (kafka-consumer config)
 
        ;; This function will be executed after the auto close.
-       ::closeable-map/after-close (fn [this-map] (garbage/collect!))
-      }
-    )
+       ::closeable-map/after-close (fn [this-map] (garbage/collect!))})
     ```
 
 Some classes do not implement `java.lang.AutoCloseable` but present
@@ -148,8 +142,33 @@ the concrete class of its argument:
 (defmethod closeable-map/close! IPool
   [x]
   (.shutdown ^IPool x))
+```
 
-## All or nothing: opening a map atomically
+## All or nothing
+
+### No half-broken closeable map
+
+You may also avoid partially open state when an exception is thrown
+when creating a `CloseableMap`. This is where `closeable-map*` comes
+handy. It outcome in one of the following:
+
+- Either everything went right, and all inner forms wrapped by
+  `closeable` correctly return a value; you get an open instance of `CloseableMap`.
+
+- Either some inner form wrapped by `closeable` didn't return a
+  closeable object but threw an exception instead. Then all
+  `closeable` forms are closed, and finally the exception is
+  bubbled up.
+
+``` clojure
+(closeable-map*
+  {:server (closeable* (http/start-server (api config)))
+   :kafka {:consumer (closeable* (kafka-consumer config))
+           :producer (closeable* (kafka-producer config))
+           :schema.registry.url \"https://localhost\"}})
+```
+
+### No half-broken state in general code
 
 In some circumstances you may need to handle exception on the creation
 of a closeable map. If an exception happens during the creation of the
@@ -165,21 +184,50 @@ For instance, this form would throw an exception:
 ;; => (ex-info \"Exception\" {})
 ```
 
-The problem is: `consumer` and `server` stay open but with no
-references. Kafka messages keep being consumed and the port stays
-locked. Using `with-closeable` prevents that kind of broken, partially
-open maps:
+`with-closeable*` prevents that kind of broken, partially open states for its bindings:
 
 ``` clojure
-(closeable-map/with-closeable [server (http/start-server (api config))
-                               consumer (kafka-consumer config)
-                               producer (throw (ex-info \"Exception\" {}))]
-  (closeable-map/closeable-map {:server server
-                                :kafka {:consumer consumer
-                                        :producer producer}}))
-;; `consumer` is closed, then `server` is closed, and finally the
-;; exception is bubbled up.
-;; => (ex-info \"Exception\" {})
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (throw (ex-info \"Exception\" {}))]
+  ;; Your code goes here.
+)
+;; Close consumer,
+;; close server,
+;; finally throw `(ex-info \"Exception\" {})`.
+```
+
+You now have the guarantee that your code will only be executed if
+all these closeable are open. In the latter example an exception is
+thrown when `producer` is evaluated, so `consumer` is closed, then
+`server` is closed, and finally the exception is bubbled up. Your
+code is not evaluated. In the next example the body is evaluated,
+but throws an exception: all bindings are closed.
+
+``` clojure
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (kafka-producer config)]
+  ;; Your code goes here.
+  (throw (ex-info \"Exception\" {})))
+;; Close producer,
+;; close consumer,
+;; close server,
+;; finally throw `(ex-info \"Exception\" {})`.
+```
+
+When no exception is thrown, leave bindings open and return like a
+normal `let` form. If you prefer to close bindings, use `with-open` as
+usual.
+  
+``` clojure
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (kafka-producer config)]
+  ;; Your code goes here.
+  )
+;; All closeable in bindings stay open.
+;; => result
 ```"
   (:require [clojure.data]
             [clojure.walk :as walk]
@@ -218,7 +266,7 @@ open maps:
   "Dynamic var. If bound to a logically true value in closing thread,
   will ignore any closeable items. You may change its value is some
   nested maps with meta `{::ignore false}`.
-  
+
   Because `clojure.walk/walk` is used for map traversal, it is not
   possible to pass down any argument. Also, as we iteratively walk
   through nested data structures, some of them do not support
@@ -226,6 +274,10 @@ open maps:
   execution thread enables a simple way to remember the parent value
   as we visit the children."
   false)
+
+(def ^:dynamic *closeables*
+  "FIXME cljdoc"
+  nil)
 
 (defmulti close!
   "Perform a side effect of the form `x` passed as argument and attempts
@@ -362,7 +414,7 @@ open maps:
 
   ``` clojure
   (defmacro -with-tag
-    \"The code is the docstring:\"
+    \"The code is the docstring: [truncated]\"
     [x tag]
     `(vary-meta ~x assoc ~tag true))
   ```"
@@ -406,17 +458,28 @@ open maps:
   [proc x]
   `(vary-meta ~x assoc ::fn ~proc))
 
-(defmacro with-closeable
-  "binding => binding-form init-expr
+(defmacro closeable*
+  "Use it within `closeable-map*` or `with-closeable*` to avoid
+  partially open state when an exception is thrown on evaluating
+  closeable forms."
+  [x]
+  `(do (assert *closeables* "`closeable` should only be used within `closeable-map*` or `with-closeable*`.")
+       (let [ret# ~x]
+         (swap! *closeables* conj ret#)
+         ret#)))
 
-  Like a `let`. Atomically open all the values, avoid partially open
-  states. If an exception occurs, close the values in reverse order
-  and finally bubble up the exception. Will ignore non-closeable
-  values. Support destructuring.
+(defmacro with-closeable*
+  "Take two arguments, a `bindings` vector and a `body`. Like a `let`,
+  support destructuring. Avoids partially open state when an exception
+  is thrown on evaluating closeable forms. Evaluate bindings
+  sequentially then return `body` and leave bindings open. When an
+  exception is thrown in a later binding or in the `body`, close
+  bindings already open in reverse order and finally bubble up the
+  exception. Do nothing for non-closeable bindings.
 
   Use it if you need exception handling on the creation of a closeable
-  map, so no closeable objects are left open but with no reference to
-  them because of an exception.
+  map, so no closeable objects are left open but with no references
+  because of an exception.
 
   For instance, this form would throw an exception and leave the
   server open and the port locked:
@@ -429,30 +492,103 @@ open maps:
   ;; messages are consumed and the port is locked.
   ;; => (ex-info \"Exception\" {})
   ```
-  
-  Using `with-closeable` prevents that kind of broken, partially open
-  states:
+
+  `with-closeable*` prevents that kind of broken, partially open
+  states for its bindings:
 
   ``` clojure
-  (with-closeable [server (http/start-server (api config))
-                   consumer (kafka-consumer config)
-                   producer (throw (ex-info \"Exception\" {}))]
-    (closeable-map {:server server
-                    :kafka {:consumer consumer
-                            :producer producer}}))
-  ;; `consumer` is closed, then `server` is closed, and finally the
-  ;; exception is bubbled up.
-  ;; => (ex-info \"Exception\" {})
+  (with-closeable* [server (http/start-server (api config))
+                    consumer (kafka-consumer config)
+                    producer (throw (ex-info \"Exception\" {}))]
+    ;; Your code goes here.
+  )
+  ;; Close consumer,
+  ;; close server,
+  ;; finally throw `(ex-info \"Exception\" {})`.
+  ```
+
+  You now have the guarantee that your code will only be executed if
+  all these closeable are open. In the latter example an exception is
+  thrown when `producer` is evaluated, so `consumer` is closed, then
+  `server` is closed, and finally the exception is bubbled up. Your
+  code is not evaluated. In the next example the body is evaluated,
+  but throws an exception: all bindings are closed.
+
+  ``` clojure
+  (with-closeable* [server (http/start-server (api config))
+                    consumer (kafka-consumer config)
+                    producer (kafka-producer config)]
+    ;; Your code goes here.
+    (throw (ex-info \"Exception\" {})))
+  ;; Close producer,
+  ;; close consumer,
+  ;; close server,
+  ;; finally throw `(ex-info \"Exception\" {})`.
+  ```
+
+  When no exception is thrown, leave bindings open and return like a
+  normal `let` form.
+  
+  ``` clojure
+  (with-closeable* [server (http/start-server (api config))
+                    consumer (kafka-consumer config)
+                    producer (kafka-producer config)]
+    ;; Your code goes here.
+    )
+  ;; All closeable in bindings stay open.
+  ;; => result
   ```"
   [bindings & body]
   (assert (even? (count bindings)) "Expecting an even number of forms in `bindings`.")
   (if (= (count bindings) 0)
-    `(do ~@body)
+    `(binding [*closeables* (or *closeables* (atom ()))]
+       ~@body)
     (let [v (gensym "value")]
-      `(let [~v ~(nth bindings 1)]
+      `(binding [*closeables* (or *closeables* (atom ()))]
          (try
-           (let [~(nth bindings 0) ~v]
-             (with-closeable ~(subvec bindings 2) ~@body))
+           (let [~(nth bindings 0) ~(nth bindings 1) ; unsplice?
+                 ~v ~(nth bindings 0)]
+             (swap! *closeables* conj ~v)
+             (with-closeable* ~(subvec bindings 2) ~@body))
            (catch Throwable th#
-             (close! ~v)
+             (doseq [c# @*closeables*]
+               (try (close! c#)
+                    (catch Throwable _#)
+                    (finally (swap! *closeables* rest))))
              (throw th#)))))))
+
+(defmacro ^CloseableMap closeable-map*
+  "Avoid partially open state when an exception is thrown on evaluating
+  inner closeable forms wrapped by `closeable`.
+
+  ``` clojure
+  (closeable-map*
+    {:server (closeable* (http/start-server (api config)))
+     :kafka {:consumer (closeable* (kafka-consumer config))
+             :producer (closeable* (kafka-producer config))
+             :schema.registry.url \"https://localhost\"}})
+  ```
+
+  The outcome of this macro `closeable-map*` is one of the following:
+
+  - Either everything went right, and all inner forms wrapped by
+    `closeable` correctly return a value, then this macro returns an
+    open instance of `CloseableMap`.
+
+  - Either some inner form wrapped by `closeable` didn't return a
+    closeable object but threw an exception instead. Then all
+    `closeable` forms are closed, and finally the exception is
+    bubbled up.
+
+  Known (minor) issue: type hint is not acknowledged, you have to tag
+  it yourself with `^CloseableMap` (most precise),
+  `^java.io.Closeable`, or `^java.lang.AutoCloseable` (most generic)."
+  [m]
+  `(binding [*closeables* (or *closeables* (atom ()))]
+     (try (vary-meta (closeable-map ~m) assoc :tag `CloseableMap)
+          (catch Throwable th#
+            (doseq [c# @*closeables*]
+              (try (close! c#)
+                   (catch Throwable _#)
+                   (finally (swap! *closeables* rest))))
+            (throw th#)))))

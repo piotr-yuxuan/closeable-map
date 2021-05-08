@@ -5,27 +5,36 @@
 [![GitHub license](https://img.shields.io/github/license/piotr-yuxuan/closeable-map)](https://github.com/piotr-yuxuan/closeable-map/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/piotr-yuxuan/closeable-map)](https://github.com/piotr-yuxuan/closeable-map/issues)
 
-Your application state is like your hens: it's safe when it is
-securely contained in a chicken coop with automated doors to prevent
-chicken run-away. Think about Zelda: when hens are free to propagate
-everywhere, they attack you and it becomes a mess.
+`<scherz>`Think about Zelda: when hens are free to propagate
+everywhere, they attack you and it becomes a mess. Your application
+state is like your hens: it's safe when it is securely contained in a
+coop with automated doors to prevent run-aways.`</scherz>`
 
 ![](./doc/automatische-huehnerklappe.jpg)
 
-This small library defines a new type of Clojure map that you may
-`(.close m)`. See it in action above. It is a tiny alternative to more
-capable projects:
+This small Clojure library tries to get as close as possible to the
+bare essential complexity of state management in code. It defines a
+new type of Clojure map that you may `(.close m)`. `<scherz>`See it in
+action above`</scherz>`.
+
+This library defines a new type of map that you may use like any other
+map. This map may contain stateful Java objects like a server, a Kafka
+producer, a file output stream. When you want to clean your state, you
+just `.close` the map and all nested stateful objects will be closed
+recursively.
+
+It is a tiny alternative to more capable projects:
 
 - Application state management:
   [stuartsierra/component](https://github.com/stuartsierra/component),
   [weavejester/integrant](weavejester/integrant),
   [tolitius/mount](https://github.com/tolitius/mount), _et al_.
-
 - Extension of `with-open`:
   [jarohen/with-open](https://github.com/jarohen/with-open)
-
 - Representing state in a map:
   [robertluo/fun-map](https://github.com/robertluo/fun-map)
+
+## Usage
 
 In your project, require:
 
@@ -55,7 +64,7 @@ You can start/stop the app in the repl with:
 
   ;; Stop/close all processes/resources with:
   (.close system)
-)
+  )
 ```
 
 It can be used in conjunction with `with-open` in test file to create
@@ -118,17 +127,12 @@ When `(.close system)` is executed, it will:
 
   - Recursively close all instances of `java.io.Closeable` and
     `java.lang.AutoCloseable`;
-
   - Recursively call all stop zero-argument functions tagged with
     `^::closeable-map/fn`;
-
   - Skip all nested `Closeable` under a `^::closeable-map/ignore`;
-
   - Silently swallow any exception with `^::closeable-map/swallow`;
-
   - Exceptions to optional `::closeable-map/ex-handler` in key or
     metadata;
-
   - If keys (or metadata) `::closeable-map/before-close` or
     `::closeable-map/after-close` are present, they will be assumed as
     a function which takes one argument (the map itself) and used run
@@ -144,9 +148,7 @@ When `(.close system)` is executed, it will:
        :consumer (kafka-consumer config)
 
        ;; This function will be executed after the auto close.
-       ::closeable-map/after-close (fn [this-map] (garbage/collect!))
-      }
-    )
+       ::closeable-map/after-close (fn [this-map] (garbage/collect!))})
     ```
 
 Some classes do not implement `java.lang.AutoCloseable` but present
@@ -178,7 +180,31 @@ the concrete class of its argument:
   (.shutdown ^IPool x))
 ```
 
-## All or nothing: opening a map atomically
+## All or nothing
+
+### No half-broken closeable map
+
+You may also avoid partially open state when an exception is thrown
+when creating a `CloseableMap`. This is where `closeable-map*` comes
+handy. It outcome in one of the following:
+
+- Either everything went right, and all inner forms wrapped by
+  `closeable` correctly return a value; you get an open instance of `CloseableMap`.
+
+- Either some inner form wrapped by `closeable` didn't return a
+  closeable object but threw an exception instead. Then all
+  `closeable` forms are closed, and finally the exception is
+  bubbled up.
+
+``` clojure
+(closeable-map*
+  {:server (closeable* (http/start-server (api config)))
+   :kafka {:consumer (closeable* (kafka-consumer config))
+           :producer (closeable* (kafka-producer config))
+           :schema.registry.url "https://localhost"}})
+```
+
+### No half-broken state in general code
 
 In some circumstances you may need to handle exception on the creation
 of a closeable map. If an exception happens during the creation of the
@@ -194,21 +220,50 @@ For instance, this form would throw an exception:
 ;; => (ex-info "Exception" {})
 ```
 
-The problem is: `consumer` and `server` stay open but with no
-references. Kafka messages keep being consumed and the port stays
-locked. Using `with-closeable` prevents that kind of broken, partially
-open maps:
+`with-closeable*` prevents that kind of broken, partially open states for its bindings:
 
 ``` clojure
-(closeable-map/with-closeable [server (http/start-server (api config))
-                               consumer (kafka-consumer config)
-                               producer (throw (ex-info "Exception" {}))]
-  (closeable-map/closeable-map {:server server
-                                :kafka {:consumer consumer
-                                        :producer producer}}))
-;; `consumer` is closed, then `server` is closed, and finally the
-;; exception is bubbled up.
-;; => (ex-info "Exception" {})
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (throw (ex-info "Exception" {}))]
+  ;; Your code goes here.
+)
+;; Close consumer,
+;; close server,
+;; finally throw `(ex-info "Exception" {})`.
+```
+
+You now have the guarantee that your code will only be executed if
+all these closeable are open. In the latter example an exception is
+thrown when `producer` is evaluated, so `consumer` is closed, then
+`server` is closed, and finally the exception is bubbled up. Your
+code is not evaluated. In the next example the body is evaluated,
+but throws an exception: all bindings are closed.
+
+``` clojure
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (kafka-producer config)]
+  ;; Your code goes here.
+  (throw (ex-info "Exception" {})))
+;; Close producer,
+;; close consumer,
+;; close server,
+;; finally throw `(ex-info "Exception" {})`.
+```
+
+When no exception is thrown, leave bindings open and return like a
+normal `let` form. If you prefer to close bindings, use `with-open` as
+usual.
+  
+``` clojure
+(with-closeable* [server (http/start-server (api config))
+                  consumer (kafka-consumer config)
+                  producer (kafka-producer config)]
+  ;; Your code goes here.
+  )
+;; All closeable in bindings stay open.
+;; => result
 ```
 
 ## Technicalities
