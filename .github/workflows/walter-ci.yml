@@ -1,3 +1,9 @@
+# This file is maintained by Walter CI, and may be rewritten.
+# https://github.com/piotr-yuxuan/walter-ci
+#
+# You are free to remove this project from Walter CI realm by opening
+# a PR. You may also create another workflow besides this one.
+#
 name: Walter CI
 'on':
   push:
