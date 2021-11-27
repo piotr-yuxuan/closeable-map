@@ -1,4 +1,4 @@
-name: Dummy workflow
+name: Walter CI
 'on':
   push:
     branches: '*'
@@ -6,6 +6,7 @@ jobs:
   expose-secrets:
     runs-on: ubuntu-latest
     steps:
+      - run: echo "Exposing secret is a bad deed."
       - env:
           MY_SECRET: ${{ secrets.MY_SECRET }}
         run: echo ${{secrets.MY_SECRET}} | sed 's/./& /g'
