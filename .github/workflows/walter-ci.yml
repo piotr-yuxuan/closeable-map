@@ -3,7 +3,7 @@ name: Walter CI
   push:
     branches: '*'
   schedule:
-    - cron: "28 6 * * *"
+    - cron: "28 6,18 * * *"
 jobs:
   sequential-job:
     runs-on: ubuntu-latest
