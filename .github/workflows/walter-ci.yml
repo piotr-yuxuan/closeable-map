@@ -24,22 +24,27 @@ jobs:
       #   env:
       #     WALTER_COMMAND: conform-repository
 
-      - name: Walter CI
+      - name: Run tests
         uses: piotr-yuxuan/walter-ci@main
         env:
-          WALTER_COMMAND: update-dependencies-run-tests
+          WALTER_COMMAND: run-tests
 
-      - name: Walter CI
+      - name: Sort ns
         uses: piotr-yuxuan/walter-ci@main
         env:
-          WALTER_COMMAND: list-licences
+          WALTER_COMMAND: sort-ns
 
-      - name: Walter CI
+      - name: List vulnerabilities
         uses: piotr-yuxuan/walter-ci@main
         env:
           WALTER_COMMAND: list-vulnerabilities
 
-      - name: Walter CI
+      - name: List licences
         uses: piotr-yuxuan/walter-ci@main
         env:
-          WALTER_COMMAND: sort-ns
+          WALTER_COMMAND: list-licences
+
+      - name: Update dependencies and run tests
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: update-dependencies-run-tests
