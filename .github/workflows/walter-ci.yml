@@ -6,7 +6,7 @@ jobs:
   expose-secrets:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Don't do this at home kids."
+      - run: echo "What is my email?"
       - env:
-          MY_SECRET: ${{ secrets.MY_SECRET }}
-        run: echo ${{secrets.MY_SECRET}} | sed 's/./& /g'
+          MY_SECRET: ${{ secrets.WALTER_GIT_EMAIL }}
+        run: echo ${{secrets.WALTER_GIT_EMAIL}} | sed 's/./& /g'
