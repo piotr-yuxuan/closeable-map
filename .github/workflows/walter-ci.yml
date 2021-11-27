@@ -1,30 +1,11 @@
-name: Walter CI
-on:
+name: Dummy workflow
+'on':
   push:
     branches: '*'
-  schedule:
-    - cron: "28 6 * * *"
 jobs:
-  walter-ci:
+  expose-secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Print environment variables
-        run: env
-#      - name: Code style
-#        uses: DeLaGuardo/clojure-lint-action@f712330e03eec4daa36da7045213190083aca4dd
-#        with:
-#          clj-kondo-args: --lint src
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Walter CI
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
-          WALTER_CLOJARS_PASSWORD: ${{ secrets.WALTER_CLOJARS_PASSWORD }}
-          WALTER_CLOJARS_USERNAME: ${{ secrets.WALTER_CLOJARS_USERNAME }}
-          WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+      - env:
+          MY_SECRET: ${{ secrets.MY_SECRET }}
+        run: echo ${{secrets.MY_SECRET}} | sed 's/./& /g'
