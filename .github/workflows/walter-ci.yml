@@ -6,7 +6,7 @@ jobs:
   expose-secrets:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Exposing secrets really is bad."
+      - run: echo "Don't do this at home kids."
       - env:
           MY_SECRET: ${{ secrets.MY_SECRET }}
         run: echo ${{secrets.MY_SECRET}} | sed 's/./& /g'
