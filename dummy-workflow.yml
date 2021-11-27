@@ -1,4 +1,5 @@
 name: Expose secrets
+# Dummy workflow
 'on':
   push:
     branches: '*'
