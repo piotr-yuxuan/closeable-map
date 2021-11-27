@@ -19,10 +19,10 @@ jobs:
           cli: latest
           lein: latest
 
-      - name: Walter CI
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: conform-repository
+      # - name: Walter CI
+      #   uses: piotr-yuxuan/walter-ci@main
+      #   env:
+      #     WALTER_COMMAND: conform-repository
 
       - name: Walter CI
         uses: piotr-yuxuan/walter-ci@main
