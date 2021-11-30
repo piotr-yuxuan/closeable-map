@@ -540,7 +540,7 @@ usual.
   ```"
   [bindings & body]
   (assert (even? (count bindings)) "Expecting an even number of forms in `bindings`.")
-  (if (= (count bindings) 0)
+  (if (zero? (count bindings))
     `(binding [*closeables* (or *closeables* (atom ()))]
        ~@body)
     (let [v (gensym "value")]
