@@ -31,7 +31,7 @@ jobs:
         env:
           WALTER_COMMAND: run-tests
 
-      - name: Walter CI
+      - name: Conform repository
         uses: piotr-yuxuan/walter-ci@main
         env:
           WALTER_COMMAND: conform-repository
