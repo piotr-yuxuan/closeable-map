@@ -55,6 +55,11 @@ jobs:
         env:
           WALTER_COMMAND: list-licences
 
+      - name: Rewrite more idiomatic Clojure
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: rewrite-idiomatic-simple
+
       - name: Update dependencies and run tests
         uses: piotr-yuxuan/walter-ci@main
         env:
