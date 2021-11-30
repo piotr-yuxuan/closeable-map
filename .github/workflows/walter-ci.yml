@@ -31,10 +31,10 @@ jobs:
         env:
           WALTER_COMMAND: run-tests
 
-       - name: Walter CI
-         uses: piotr-yuxuan/walter-ci@main
-         env:
-           WALTER_COMMAND: conform-repository
+      - name: Walter CI
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: conform-repository
 
       - name: Update .gitignore
         uses: piotr-yuxuan/walter-ci@main
