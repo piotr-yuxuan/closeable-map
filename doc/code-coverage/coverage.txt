@@ -1,0 +1,2 @@
+Lines Non-Blank Instrumented Covered Partial
+  594       506          135      86       6 piotr_yuxuan/closeable_map.clj
