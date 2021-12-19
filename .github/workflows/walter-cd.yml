@@ -1,0 +1,116 @@
+# This file is maintained by Walter CI, and may be rewritten.
+# https://github.com/piotr-yuxuan/walter-ci
+#
+# You are free to remove this project from Walter CI realm by opening
+# a PR. You may also create another workflow besides this one.
+#
+name: Walter CD
+'on':
+  push:
+    branches: '*'
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    env:
+      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - name: Run tests
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: run-tests
+
+  list-vulnerabilities:
+    runs-on: ubuntu-latest
+    env:
+      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-nvd-${{ hashFiles('**/project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-nvd-
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - name: List vulnerabilities
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: list-vulnerabilities
+
+  list-licences:
+    runs-on: ubuntu-latest
+    env:
+      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - name: List licences
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: list-licences
+
+  package-deploy-artifacts:
+    runs-on: ubuntu-latest
+    needs: [ run-tests, list-vulnerabilities, list-licences ]
+    if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.master_branch) }}
+    env:
+      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - name: Package and deploy artifacts
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: package-deploy-artifacts
