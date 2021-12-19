@@ -11,31 +11,6 @@ name: Walter CI
   schedule:
     - cron: "28 6,18 * * *"
 jobs:
-  run-tests:
-    runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
-    steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Run tests
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: run-tests
 
   conform-repository:
     runs-on: ubuntu-latest
@@ -244,31 +219,3 @@ jobs:
         uses: piotr-yuxuan/walter-ci@main
         env:
           WALTER_COMMAND: update-dependencies-run-tests
-
-  package-deploy-artifacts:
-    runs-on: ubuntu-latest
-    needs: [ run-tests ]
-    if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.master_branch) }}
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
-    steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Package and deploy artifacts
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: package-deploy-artifacts
