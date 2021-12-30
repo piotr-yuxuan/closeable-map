@@ -8,11 +8,16 @@ name: Walter CD
 'on':
   push:
     branches: '*'
+
+concurrency:
+  group: walter-cd
+  cancel-in-progress: true
+
 jobs:
   run-tests:
     runs-on: ubuntu-latest
     env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
     steps:
       - uses: actions/checkout@main
@@ -38,7 +43,7 @@ jobs:
   list-vulnerabilities:
     runs-on: ubuntu-latest
     env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
     steps:
       - uses: actions/checkout@main
@@ -64,7 +69,7 @@ jobs:
   list-licences:
     runs-on: ubuntu-latest
     env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
     steps:
       - uses: actions/checkout@main
@@ -92,7 +97,7 @@ jobs:
     needs: [ run-tests, list-vulnerabilities, list-licences ]
     if: ${{ github.event.ref == format('refs/heads/{0}', github.event.repository.master_branch) }}
     env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
+      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
     steps:
       - uses: actions/checkout@main
