@@ -13,13 +13,13 @@ name: Walter CI
 
 concurrency:
   group: walter-ci
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   conform-repository:
     runs-on: ubuntu-latest
     env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
       WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
     steps:
       - uses: actions/checkout@main
