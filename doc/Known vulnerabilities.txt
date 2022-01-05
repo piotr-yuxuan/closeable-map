@@ -1,5 +1,5 @@
 Checking dependencies for stdin  ...
-  using nvd-clojure:  and dependency-check: 6.5.1
+  using nvd-clojure:  and dependency-check: 6.5.2
 
 0 vulnerabilities detected. Severity: NONE
 Detailed reports saved in: /home/runner/work/closeable-map/closeable-map/target/nvd
