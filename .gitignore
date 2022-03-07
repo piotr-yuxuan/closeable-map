@@ -7,4 +7,4 @@
 /.lein-*
 /.nrepl-history
 /.nrepl-port
-*.imln*/.lein-*n*/.nrepl-portn*/checkoutsn*/classesn*/target/n.hg/n.hgignoren.idea/n.lein-failuresn.lein-repl-historyn.lsp/n.nrepl-portn/.eastwoodn/.events.logn/pom.xmlncheckoutsnperf/.terraform*nperf/.terraform/**nperf/terraform*npom.xml.ascntarget/
+*.imln*/.lein-*n*/.nrepl-portn*/checkoutsn*/classesn*/target/n.hg/n.hgignoren.idea/n.lein-failuresn.lein-repl-historyn.lsp/n.nrepl-portn/.eastwoodn/.events.logn/pom.xmlncheckoutsnperf/.terraform*nperf/.terraform/**nperf/terraform*npom.xml.ascntarget/*.imln*/.lein-*n*/.nrepl-portn*/checkoutsn*/classesn*/target/n.hg/n.hgignoren.idea/n.lein-failuresn.lein-repl-historyn.lsp/n.nrepl-portn/.eastwoodn/.events.logn/pom.xmlncheckoutsnperf/.terraform*nperf/.terraform/**nperf/terraform*npom.xml.ascntarget/
