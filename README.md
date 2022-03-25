@@ -1,5 +1,6 @@
 # `closeable-map`
 
+[![Build status](https://img.shields.io/github/workflow/status/piotr-yuxuan/closeable-map/Walter%20CD)](https://github.com/piotr-yuxuan/closeable-map/actions/workflows/walter-cd.yml)
 [![Clojars badge](https://img.shields.io/clojars/v/piotr-yuxuan/closeable-map.svg)](https://clojars.org/piotr-yuxuan/closeable-map)
 [![Clojars downloads](https://img.shields.io/clojars/dt/piotr-yuxuan/closeable-map)](https://clojars.org/piotr-yuxuan/closeable-map)
 [![cljdoc badge](https://cljdoc.org/badge/piotr-yuxuan/closeable-map)](https://cljdoc.org/d/piotr-yuxuan/closeable-map/CURRENT)
