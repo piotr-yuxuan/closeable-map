@@ -12,8 +12,8 @@
   :dependencies [[potemkin/potemkin "0.4.5"]]
   :aot :all
   :profiles {:github {:github/topics ["map" "clojure" "state-management" "component"
-                                      "state" "mount" "integrant" "closeable" "deps-edn"
-                                      "tools-cli" "with-open" "clojure-maps"]}
+                                      "state" "mount" "integrant" "closeable"
+                                      "with-open" "clojure-maps" "system"]}
              :provided {:dependencies [[org.clojure/clojure "1.11.0"]]}
              :dev {:global-vars {*warn-on-reflection* true}}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
