@@ -27,6 +27,7 @@ recursively.
 
 It is a tiny alternative to more capable projects:
 
+- Application state management in a map: [juxt/clip](https://github.com/juxt/clip)
 - Application state management:
   [stuartsierra/component](https://github.com/stuartsierra/component),
   [weavejester/integrant](weavejester/integrant),
