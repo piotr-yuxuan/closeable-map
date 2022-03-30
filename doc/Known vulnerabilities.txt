@@ -1,66 +1,8 @@
 Checking dependencies for stdin...
   using nvd-clojure: 2.4.0 and dependency-check: 7.0.2
-Encountered errors while analyzing: One or more exceptions occurred during analysis:
-	UpdateException: The execution of the download was interrupted
-		caused by ExecutionException: org.owasp.dependencycheck.utils.DownloadFailedException: Unable to download NVD CVE 2021
-		caused by DownloadFailedException: Unable to download NVD CVE 2021
-	NoDataException: No documents exist
-#error {
- :cause Unable to download NVD CVE 2021
- :via
- [{:type org.owasp.dependencycheck.data.update.exception.UpdateException
-   :message The execution of the download was interrupted
-   :at [org.owasp.dependencycheck.data.update.NvdCveUpdater performUpdate NvdCveUpdater.java 293]}
-  {:type java.util.concurrent.ExecutionException
-   :message org.owasp.dependencycheck.utils.DownloadFailedException: Unable to download NVD CVE 2021
-   :at [java.util.concurrent.FutureTask report FutureTask.java 122]}
-  {:type org.owasp.dependencycheck.utils.DownloadFailedException
-   :message Unable to download NVD CVE 2021
-   :at [org.owasp.dependencycheck.data.update.nvd.DownloadTask call DownloadTask.java 143]}]
- :trace
- [[org.owasp.dependencycheck.data.update.nvd.DownloadTask call DownloadTask.java 143]
-  [org.owasp.dependencycheck.data.update.nvd.DownloadTask call DownloadTask.java 43]
-  [java.util.concurrent.FutureTask run FutureTask.java 264]
-  [java.util.concurrent.ThreadPoolExecutor runWorker ThreadPoolExecutor.java 1128]
-  [java.util.concurrent.ThreadPoolExecutor$Worker run ThreadPoolExecutor.java 628]
-  [java.lang.Thread run Thread.java 829]]}
-#error {
- :cause No documents exist
- :via
- [{:type org.owasp.dependencycheck.exception.NoDataException
-   :message No documents exist
-   :at [org.owasp.dependencycheck.Engine ensureDataExists Engine.java 1093]}]
- :trace
- [[org.owasp.dependencycheck.Engine ensureDataExists Engine.java 1093]
-  [org.owasp.dependencycheck.Engine analyzeDependencies Engine.java 613]
-  [nvd.task.check$scan_and_analyze$fn__793 invoke check.clj 53]
-  [nvd.task.check$scan_and_analyze invokeStatic check.clj 52]
-  [nvd.task.check$scan_and_analyze invoke check.clj 47]
-  [nvd.task.check$impl invokeStatic check.clj 90]
-  [nvd.task.check$impl invoke check.clj 82]
-  [nvd.task.check$_main invokeStatic check.clj 147]
-  [nvd.task.check$_main doInvoke check.clj 98]
-  [clojure.lang.RestFn invoke RestFn.java 421]
-  [nvd.task$check invokeStatic task.clj 31]
-  [nvd.task$check invoke task.clj 28]
-  [clojure.lang.AFn applyToHelper AFn.java 154]
-  [clojure.lang.AFn applyTo AFn.java 144]
-  [clojure.lang.Var applyTo Var.java 705]
-  [clojure.core$apply invokeStatic core.clj 667]
-  [clojure.core$apply invoke core.clj 662]
-  [clojure.run.exec$exec invokeStatic exec.clj 48]
-  [clojure.run.exec$exec doInvoke exec.clj 39]
-  [clojure.lang.RestFn invoke RestFn.java 423]
-  [clojure.run.exec$_main$fn__205 invoke exec.clj 180]
-  [clojure.run.exec$_main invokeStatic exec.clj 176]
-  [clojure.run.exec$_main doInvoke exec.clj 139]
-  [clojure.lang.RestFn applyTo RestFn.java 137]
-  [clojure.lang.Var applyTo Var.java 705]
-  [clojure.core$apply invokeStatic core.clj 667]
-  [clojure.main$main_opt invokeStatic main.clj 514]
-  [clojure.main$main_opt invoke main.clj 510]
-  [clojure.main$main invokeStatic main.clj 664]
-  [clojure.main$main doInvoke main.clj 616]
-  [clojure.lang.RestFn applyTo RestFn.java 137]
-  [clojure.lang.Var applyTo Var.java 705]
-  [clojure.main main main.java 40]]}
+
+0 vulnerabilities detected. Severity: NONE
+Detailed reports saved in: /home/runner/work/closeable-map/closeable-map/target/nvd
+HTML report : /home/runner/work/closeable-map/closeable-map/target/nvd/dependency-check-report.html
+
+   *** THIS REPORT IS WITHOUT WARRANTY ***
