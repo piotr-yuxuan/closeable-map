@@ -13,7 +13,8 @@
   :aot :all
   :profiles {:github {:github/topics ["map" "clojure" "state-management" "component"
                                       "state" "mount" "integrant" "closeable"
-                                      "with-open" "clojure-maps" "system"]}
+                                      "with-open" "clojure-maps" "system"]
+                      :github/private? false}
              :provided {:dependencies [[org.clojure/clojure "1.11.0"]]}
              :dev {:global-vars {*warn-on-reflection* true}}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
