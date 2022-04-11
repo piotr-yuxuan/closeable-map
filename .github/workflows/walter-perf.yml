@@ -1,0 +1,41 @@
+# This file is maintained by Walter CI, and may be rewritten.
+# https://github.com/piotr-yuxuan/walter-ci
+#
+# You are free to remove this project from Walter CI realm by opening
+# a PR. You may also create another workflow besides this one.
+#
+name: Walter Perf
+'on':
+  schedule:
+    - cron: "28 3 * * 2" # Run only once a week, on Tuesday to save some credits. Otherwise: "28 3 * * 2,5"
+
+concurrency:
+  group: walter-perf
+  cancel-in-progress: false
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    env:
+      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: latest
+          lein: latest
+      - name: Run tests
+        uses: piotr-yuxuan/walter-ci@main
+        env:
+          WALTER_COMMAND: run-ci-perf-tests
