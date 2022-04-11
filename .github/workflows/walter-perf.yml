@@ -6,6 +6,8 @@
 #
 name: Walter Perf
 'on':
+  workflow_dispatch:
+  repository_dispatch:
   schedule:
     - cron: "28 3 * * 2" # Run only once a week, on Tuesday to save some credits. Otherwise: "28 3 * * 2,5"
 
