@@ -3,199 +3,168 @@
 #
 # You are free to remove this project from Walter CI realm by opening
 # a PR. You may also create another workflow besides this one.
-#
+
 name: Walter CI
 'on':
-  workflow_dispatch:
-  repository_dispatch:
-  push:
-    branches: '*'
+  repository_dispatch: null
+  workflow_dispatch: null
   schedule:
-    - cron: "28 6,18 * * *"
-
+  - cron: 28 6,18 * * *
 concurrency:
   group: walter-ci
   cancel-in-progress: true
-
+env:
+  GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_AUTHOR_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_AUTHOR_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  GIT_ASKPASS: ${HOME}/.walter-ci/bin/askpass.sh
+  WALTER_ACTOR: ${{ secrets.WALTER_ACTOR }}
+  WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
 jobs:
   conform-repository:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Conform GitHub repository
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Conform repository
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: conform-repository
-
-  update-git-ignore:
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: walter conform-repository
+    - run: git add .github/CODEOWNERS.yml
+    - run: git add .github/FUNDING.yml
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Conform repository"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  update-gitignore:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Update .gitignore
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Update .gitignore
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: clojure-git-ignore
-
-  sort-ns:
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: walter update-git-ignore
+    - run: git add .gitignore
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update .gitignore"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  ns-sort:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Sort namespace forms
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Sort ns
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: sort-ns
-
-  list-vulnerabilities:
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: lein help
+    - run: lein ns-sort
+    - run: git add .
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Sort namespace forms"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  report-vulnerabilities:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Scan and report vulnerabilities
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-nvd-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-nvd-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: List vulnerabilities
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: list-vulnerabilities
-
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-nvd-${{ hashFiles('**/project.clj') }}
+        restore-keys: ${{ runner.os }}-maven-
+    - run: git rm "./doc/Known vulnerabilities.txt"
+      continue-on-error: true
+    - run: clojure -T:security/nvd nvd.task/check :classpath '"'"$(lein with-profile -user,-dev classpath)"'"'
+      continue-on-error: true
+    - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
+    - run: git add ./doc/known-vulnerabilities.csv
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update known vulnerabilities"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   code-coverage:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Code coverage
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Code coverage
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: code-coverage
-
-  rewrite-idiomatic-simple:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-perf-${{ hashFiles('**/project.clj') }}
+        restore-keys: ${{ runner.os }}-maven-
+    - run: git rm ./doc/code-coverage/
+      continue-on-error: true
+    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --cov-text --cov-html
+    - run: git add ./doc/code-coverage/**.{txt,css,html}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update code coverage"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  idiomatic-code:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Idiomatic code
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Rewrite more idiomatic Clojure
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: rewrite-idiomatic-simple
-
-  update-dependencies-run-tests:
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: clojure -M:lint/idiom -- --replace
+    - run: git add .
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "More idiomatic code"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  update-dependencies:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Update dependency versions
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Update dependencies and run tests
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: update-dependencies-run-tests
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: lein ancient upgrade :no-tests :all :recursive :check-clojure :allow-qualified
+    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
+    - run: git add .
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update dependency versions"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
