@@ -14,12 +14,12 @@ concurrency:
   group: walter-ci
   cancel-in-progress: true
 env:
-  GIT_COMMITTER_NAME: ${{ secrets.GITHUB_ACTOR }}
-  GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
-  GIT_AUTHOR_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
-  GIT_AUTHOR_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
-  GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
   GIT_ASKPASS: ${HOME}/.walter-ci/bin/askpass.sh
+  GIT_AUTHOR_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_AUTHOR_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   conform-repository:
     runs-on: ubuntu-latest
@@ -32,10 +32,17 @@ jobs:
     - run: walter conform-repository
     - run: git add .github/CODEOWNERS.yml
     - run: git add .github/FUNDING.yml
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Conform repository"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   update-gitignore:
     runs-on: ubuntu-latest
     name: Update .gitignore
@@ -43,10 +50,17 @@ jobs:
     - uses: piotr-yuxuan/walter-ci@main
     - run: walter update-git-ignore
     - run: git add .gitignore
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Update .gitignore"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   ns-sort:
     runs-on: ubuntu-latest
     name: Sort namespace forms
@@ -55,10 +69,17 @@ jobs:
     - run: lein help
     - run: lein ns-sort
     - run: git add .
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Sort namespace forms"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   report-vulnerabilities:
     runs-on: ubuntu-latest
     name: Scan and report vulnerabilities
@@ -75,10 +96,17 @@ jobs:
       continue-on-error: true
     - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
     - run: git add ./doc/known-vulnerabilities.csv
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Update known vulnerabilities"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   code-coverage:
     runs-on: ubuntu-latest
     name: Code coverage
@@ -93,10 +121,17 @@ jobs:
       continue-on-error: true
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --cov-text --cov-html
     - run: git add ./doc/code-coverage/**.{txt,css,html}
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Update code coverage"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   idiomatic-code:
     runs-on: ubuntu-latest
     name: Idiomatic code
@@ -104,10 +139,17 @@ jobs:
     - uses: piotr-yuxuan/walter-ci@main
     - run: clojure -M:lint/idiom -- --replace
     - run: git add .
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "More idiomatic code"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   update-dependencies:
     runs-on: ubuntu-latest
     name: Update dependency versions
@@ -116,7 +158,14 @@ jobs:
     - run: lein ancient upgrade :no-tests :all :recursive :check-clojure :allow-qualified
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
     - run: git add .
-    - {}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
     - run: git commit --message "Update dependency versions"
       if: steps.diff.outcome == 'failure'
-    - {}
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
