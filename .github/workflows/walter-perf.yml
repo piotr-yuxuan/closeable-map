@@ -3,41 +3,41 @@
 #
 # You are free to remove this project from Walter CI realm by opening
 # a PR. You may also create another workflow besides this one.
-#
+
 name: Walter Perf
 'on':
-  workflow_dispatch:
-  repository_dispatch:
+  workflow_dispatch: null
+  repository_dispatch: null
   schedule:
-    - cron: "28 3 * * 2" # Run only once a week, on Tuesday to save some credits. Otherwise: "28 3 * * 2,5"
-
+  - cron: 28 3 * * 2
 concurrency:
   group: walter-perf
-  cancel-in-progress: false
-
+  cancel-in-progress: true
+env:
+  GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_AUTHOR_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
+  GIT_AUTHOR_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+  GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  GIT_ASKPASS: ${HOME}/.walter-ci/bin/askpass.sh
 jobs:
-  run-tests:
+  run-perf-tests:
     runs-on: ubuntu-latest
-    env:
-      WALTER_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      WALTER_GIT_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
+    name: Run tests
     steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/project.clj') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install Clojure
-        uses: DeLaGuardo/setup-clojure@master
-        with:
-          cli: latest
-          lein: latest
-      - name: Run tests
-        uses: piotr-yuxuan/walter-ci@main
-        env:
-          WALTER_COMMAND: run-ci-perf-tests
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: lein with-profile +walter/kaocha,+kaocha,+perf run -m kaocha.runner --focus-meta :perf
+      continue-on-error: true
+    - run: git add ./doc/perf
+      continue-on-error: true
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Performance test report"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
