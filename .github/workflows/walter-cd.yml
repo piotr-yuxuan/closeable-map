@@ -177,7 +177,7 @@ jobs:
       run: lein pprint :deploy-repositories | bb --stream -I --eval '(System/exit (if (contains? (into {} *input*) (first *command-line-args*)) 0 1))' "clojars"
       continue-on-error: true
     - name: lein deploy clojars
-      if: steps.target-clojars.outcome == 'sucess'
+      if: steps.target-clojars.outcome == 'success'
       run: walter retry
       env:
         WALTER_TRY: lein deploy clojars
@@ -186,7 +186,7 @@ jobs:
       run: lein pprint :deploy-repositories | bb --stream -I --eval '(System/exit (if (contains? (into {} *input*) (first *command-line-args*)) 0 1))' "github"
       continue-on-error: true
     - name: lein deploy github
-      if: steps.target-github.outcome == 'sucess'
+      if: steps.target-github.outcome == 'success'
       run: walter retry
       env:
         WALTER_TRY: lein deploy github
