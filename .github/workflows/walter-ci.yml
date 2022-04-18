@@ -27,20 +27,7 @@ env:
   GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
   WALTER_VERSION: ${{ github.event.inputs.walter-version }}
 jobs:
-  sarif-terraform:
-    runs-on: ubuntu-latest
-    name: Terraform tfsec vulnerabilities
-    steps:
-    - uses: piotr-yuxuan/walter-ci@main
-    - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
-      with:
-        sarif_file: tfsec.sarif
-    - name: Upload analysis results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: tfsec.sarif
-        wait-for-processing: true
-  sarif-clojure:
+  security-sarif-clojure:
     runs-on: ubuntu-latest
     name: Clojure clj-holmes vulnerabilities
     steps:
@@ -55,6 +42,36 @@ jobs:
       with:
         sarif_file: tfsec.sarif
         wait-for-processing: true
+  security-nvd:
+    runs-on: ubuntu-latest
+    name: Clojure nvd vulnerabilities
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-nvd-${{ hashFiles('**/project.clj') }}
+        restore-keys: ${{ runner.os }}-maven-
+    - run: git rm "./doc/Known vulnerabilities.txt"
+      continue-on-error: true
+    - run: clojure -Ttools install nvd-clojure/nvd-clojure '{:mvn/version "RELEASE"}' :as nvd
+    - run: clojure -Tnvd nvd.task/check :classpath '"'"$(lein with-profile -user,-dev classpath)"'"'
+      continue-on-error: true
+    - run: bb "$HOME/.walter-ci/cut-nvd.clj" ./target/nvd/dependency-check-report.csv
+      continue-on-error: true
+    - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
+    - run: git add ./doc/known-vulnerabilities.csv
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update known vulnerabilities"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   conform-repository:
     runs-on: ubuntu-latest
     name: Conform GitHub repository
@@ -95,35 +112,19 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
-  report-vulnerabilities:
+  security-sarif-terraform:
     runs-on: ubuntu-latest
-    name: Clojure nvd vulnerabilities
+    name: Terraform tfsec vulnerabilities
     steps:
     - uses: piotr-yuxuan/walter-ci@main
-    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
+    - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
       with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-nvd-${{ hashFiles('**/project.clj') }}
-        restore-keys: ${{ runner.os }}-maven-
-    - run: git rm "./doc/Known vulnerabilities.txt"
-      continue-on-error: true
-    - run: clojure -T:security/nvd nvd.task/check :classpath '"'"$(lein with-profile -user,-dev classpath)"'"'
-      continue-on-error: true
-    - run: bb "$HOME/.walter-ci/cut-nvd.clj" ./target/nvd/dependency-check-report.csv
-      continue-on-error: true
-    - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
-    - run: git add ./doc/known-vulnerabilities.csv
-    - run: git diff --staged --exit-code
-      continue-on-error: true
-      id: diff
-    - run: git commit --message "Update known vulnerabilities"
-      if: steps.diff.outcome == 'failure'
-    - name: git push
-      run: walter retry
-      if: steps.diff.outcome == 'failure'
-      env:
-        WALTER_TRY: git push
-        WALTER_BEFORE_RETRY: git pull --rebase
+        sarif_file: tfsec.sarif
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: tfsec.sarif
+        wait-for-processing: true
   ns-sort:
     runs-on: ubuntu-latest
     name: Sort namespace forms
