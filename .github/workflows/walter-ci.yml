@@ -193,7 +193,7 @@ jobs:
         restore-keys: ${{ runner.os }}-maven-
     - run: git rm ./doc/code-coverage/
       continue-on-error: true
-    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --cov-text --cov-html
+    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --skip-meta :perf --cov-text --cov-html
     - run: git add ./doc/code-coverage/**.{txt,css,html}
     - run: git diff --staged --exit-code
       continue-on-error: true
