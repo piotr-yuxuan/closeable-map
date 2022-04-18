@@ -33,16 +33,17 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Security: clojure,clj-holmes'
     steps:
-    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/checkout@main
     - uses: clj-holmes/clj-holmes-action@200d2d03900917d7eb3c24fc691ab83579a87fcb
       with:
         output-type: sarif
-        output-file: tfsec.sarif
+        output-file: clj-holmes.sarif
         fail-on-result: 'false'
+    - run: cat clj-holmes.sarif
     - name: Upload analysis results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       with:
-        sarif_file: tfsec.sarif
+        sarif_file: clj-holmes.sarif
         wait-for-processing: true
   security-nvd:
     runs-on: ubuntu-latest
@@ -79,11 +80,6 @@ jobs:
     name: Build artifacts
     steps:
     - uses: piotr-yuxuan/walter-ci@main
-    - name: Set project version to ${{ github.event.inputs.version-to-release }}
-      run: |-
-        VERSION_FILE=$(ls resources/*.version)
-        echo ${VERSION_TO_RELEASE} > ${VERSION_FILE}
-        git add ${VERSION_FILE}
     - run: lein uberjar
     - run: lein with-profile uberjar pom
     - uses: actions/upload-artifact@v3
@@ -96,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     name: clj-kondo, a linter for Clojure
     steps:
-    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/checkout@main
     - uses: DeLaGuardo/clojure-lint-action@2d6013175031096ae07bc9b90a07173029ad7dc9
       with:
         clj-kondo-args: --lint src test
@@ -149,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Security: secrets'
     steps:
-    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/checkout@main
     - uses: reviewdog/action-detect-secrets@c29dcff1bd0ac2e4ea528311abac6fdd2d8bb13a
       with:
         github_token: ${{ secrets.github_token }}
@@ -158,10 +154,11 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Security: tfsec'
     steps:
-    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/checkout@main
     - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
       with:
         sarif_file: tfsec.sarif
+    - run: cat tfsec.sarif
     - name: Upload analysis results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       with:
@@ -234,9 +231,7 @@ jobs:
     permissions:
       security-events: write
     steps:
-    - uses: piotr-yuxuan/walter-ci@main
-      with:
-        no-cache: true
+    - uses: actions/checkout@main
     - name: Retrieve artifacts
       uses: actions/download-artifact@v3
       with:
@@ -250,8 +245,9 @@ jobs:
         cache-dir: ${TRIVY_CACHE_DIR}
         security-checks: vuln,config
         output: trivy-results.sarif
-        ignore-unfixed: true
+        ignore-unfixed: false
         format: sarif
+    - run: cat trivy-results.sarif
     - name: Upload analysis results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       with:
