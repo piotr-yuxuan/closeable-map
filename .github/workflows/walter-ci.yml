@@ -13,6 +13,8 @@ name: Walter CI
         description: Walter bin version
         required: false
         type: string
+  push:
+    branches: '**'
   schedule:
   - cron: 28 6,18 * * *
 concurrency:
@@ -29,7 +31,7 @@ env:
 jobs:
   security-sarif-clojure:
     runs-on: ubuntu-latest
-    name: Clojure clj-holmes vulnerabilities
+    name: 'Security: clojure,clj-holmes'
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: clj-holmes/clj-holmes-action@200d2d03900917d7eb3c24fc691ab83579a87fcb
@@ -44,7 +46,7 @@ jobs:
         wait-for-processing: true
   security-nvd:
     runs-on: ubuntu-latest
-    name: Clojure nvd vulnerabilities
+    name: 'Security: clojure,nvd'
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
@@ -72,6 +74,37 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
+  build-artifacts:
+    runs-on: ubuntu-latest
+    name: Build artifacts
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - name: Set project version to ${{ github.event.inputs.version-to-release }}
+      run: |-
+        VERSION_FILE=$(ls resources/*.version)
+        echo ${VERSION_TO_RELEASE} > ${VERSION_FILE}
+        git add ${VERSION_FILE}
+    - run: lein uberjar
+    - run: lein with-profile uberjar pom
+    - uses: actions/upload-artifact@v3
+      with:
+        name: jars
+        path: |-
+          target/*.jar
+          pom.xml
+  clj-kondo:
+    runs-on: ubuntu-latest
+    name: clj-kondo, a linter for Clojure
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: DeLaGuardo/clojure-lint-action@2d6013175031096ae07bc9b90a07173029ad7dc9
+      with:
+        clj-kondo-args: --lint src test
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
+    - name: Ignore any error code
+      if: always()
+      run: echo 0
   conform-repository:
     runs-on: ubuntu-latest
     name: Conform GitHub repository
@@ -112,9 +145,18 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
+  detect-secrets:
+    runs-on: ubuntu-latest
+    name: 'Security: secrets'
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: reviewdog/action-detect-secrets@c29dcff1bd0ac2e4ea528311abac6fdd2d8bb13a
+      with:
+        github_token: ${{ secrets.github_token }}
+        fail_on_error: false
   security-sarif-terraform:
     runs-on: ubuntu-latest
-    name: Terraform tfsec vulnerabilities
+    name: 'Security: tfsec'
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
@@ -125,6 +167,26 @@ jobs:
       with:
         sarif_file: tfsec.sarif
         wait-for-processing: true
+  list-licenses:
+    runs-on: ubuntu-latest
+    name: List dependency licenses
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - run: lein licenses :csv > ./doc/Licenses.csv
+    - run: sort -o ./doc/Licenses.csv{,}
+    - run: awk -i inplace 'BEGINFILE{print "Library name,Version,License name"}{print}' ./doc/Licenses.csv
+    - run: git add ./doc/Licenses.csv
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "List dependency licenses"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   ns-sort:
     runs-on: ubuntu-latest
     name: Sort namespace forms
@@ -162,6 +224,39 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
+  security-sarif-trivy:
+    runs-on: ubuntu-latest
+    name: 'Security: general,clojure'
+    env:
+      TRIVY_CACHE_DIR: ${HOME}/.trivy-cache-dir
+    needs:
+    - build-artifacts
+    permissions:
+      security-events: write
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+      with:
+        no-cache: true
+    - name: Retrieve artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: jars
+        path: target
+    - uses: aquasecurity/trivy-action@master
+      continue-on-error: true
+      with:
+        scan-type: fs
+        scan-ref: .
+        cache-dir: ${TRIVY_CACHE_DIR}
+        security-checks: vuln,config
+        output: trivy-results.sarif
+        ignore-unfixed: true
+        format: sarif
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: trivy-results.sarif
+        wait-for-processing: true
   update-dependencies:
     runs-on: ubuntu-latest
     name: Update dependency versions
