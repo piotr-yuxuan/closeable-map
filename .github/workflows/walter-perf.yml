@@ -6,8 +6,13 @@
 
 name: Walter Perf
 'on':
-  workflow_dispatch: null
   repository_dispatch: null
+  workflow_dispatch:
+    inputs:
+      walter-version:
+        description: Walter bin version
+        required: false
+        type: string
   schedule:
   - cron: 28 3 * * 2
 concurrency:
@@ -20,10 +25,11 @@ env:
   GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
   GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
   GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  WALTER_VERSION: ${{ github.event.inputs.walter-version }}
 jobs:
   run-perf-tests:
     runs-on: ubuntu-latest
-    name: Run tests
+    name: Run performance tests
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - run: lein with-profile +walter/kaocha,+kaocha,+perf run -m kaocha.runner --focus-meta :perf
