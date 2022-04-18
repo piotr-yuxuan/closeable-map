@@ -194,3 +194,10 @@ jobs:
       run: walter retry
       env:
         WALTER_TRY: lein deploy github
+    - name: Build cljdoc ahead of the first visitor
+      run: |-
+        curl 'https://cljdoc.org/api/request-build2' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -H 'Origin: https://cljdoc.org' \
+        -H 'Referer: https://cljdoc.org/d/com.github.piotr-yuxuan/walter-ci/${VERSION_TO_RELEASE}' \
+        --data-raw 'project=com.github.piotr-yuxuan%2Fwalter-ci&version=${VERSION_TO_RELEASE}'
