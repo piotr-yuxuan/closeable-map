@@ -27,6 +27,10 @@ env:
   GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
   GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
   VERSION_TO_RELEASE: ${{ github.event.inputs.version-to-release }}
+  WALTER_ACTOR: ${{ secrets.WALTER_ACTOR }}
+  WALTER_CLOJARS_PASSWORD: ${{ secrets.WALTER_CLOJARS_PASSWORD }}
+  WALTER_CLOJARS_USERNAME: ${{ secrets.WALTER_CLOJARS_USERNAME }}
+  WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
   WALTER_VERSION: ${{ github.event.inputs.walter-version }}
 jobs:
   run-tests:
