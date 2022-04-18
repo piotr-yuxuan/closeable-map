@@ -6,13 +6,19 @@
 
 name: Walter CD
 'on':
-  workflow_dispatch: null
   repository_dispatch: null
+  workflow_dispatch:
+    inputs:
+      walter-version:
+        description: Walter bin version
+        required: false
+        type: string
+      version-to-release:
+        description: Version to release
+        required: false
+        type: string
   push:
     branches: '*'
-concurrency:
-  group: walter-cd
-  cancel-in-progress: true
 env:
   GIT_ASKPASS: ${HOME}/.walter-ci/bin/askpass.sh
   GIT_AUTHOR_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
@@ -20,6 +26,8 @@ env:
   GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
   GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
   GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  VERSION_TO_RELEASE: ${{ github.event.inputs.version-to-release }}
+  WALTER_VERSION: ${{ github.event.inputs.walter-version }}
 jobs:
   run-tests:
     runs-on: ubuntu-latest
@@ -29,7 +37,8 @@ jobs:
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
   report-vulnerabilities:
     runs-on: ubuntu-latest
-    name: Scan and report vulnerabilities
+    name: Clojure nvd vulnerabilities
+    if: ${{ github.event.inputs.version-to-release == '' }}
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
@@ -42,6 +51,7 @@ jobs:
     - run: clojure -T:security/nvd nvd.task/check :classpath '"'"$(lein with-profile -user,-dev classpath)"'"'
       continue-on-error: true
     - run: bb "$HOME/.walter-ci/cut-nvd.clj" ./target/nvd/dependency-check-report.csv
+      continue-on-error: true
     - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
     - run: git add ./doc/known-vulnerabilities.csv
     - run: git diff --staged --exit-code
@@ -55,9 +65,40 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
+  sarif-clojure:
+    runs-on: ubuntu-latest
+    name: Clojure clj-holmes vulnerabilities
+    if: ${{ github.event.inputs.version-to-release == '' }}
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: clj-holmes/clj-holmes-action@200d2d03900917d7eb3c24fc691ab83579a87fcb
+      with:
+        output-type: sarif
+        output-file: tfsec.sarif
+        fail-on-result: 'false'
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: tfsec.sarif
+        wait-for-processing: true
+  sarif-terraform:
+    runs-on: ubuntu-latest
+    name: Terraform tfsec vulnerabilities
+    if: ${{ github.event.inputs.version-to-release == '' }}
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
+      with:
+        sarif_file: tfsec.sarif
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: tfsec.sarif
+        wait-for-processing: true
   list-licenses:
     runs-on: ubuntu-latest
     name: List dependency licenses
+    if: ${{ github.event.inputs.version-to-release == '' }}
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - run: lein licenses :csv > ./doc/Licenses.csv
@@ -75,29 +116,76 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
+  build-artifacts:
+    runs-on: ubuntu-latest
+    name: Build artifacts
+    if: ${{ github.event.inputs.version-to-release != '' }}
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - name: Set project version to ${{ github.event.inputs.version-to-release }}
+      run: |-
+        VERSION_FILE=$(ls resources/*.version)
+        echo ${VERSION_TO_RELEASE} > ${VERSION_FILE}
+        git add ${VERSION_FILE}
+    - run: lein uberjar
+    - uses: actions/upload-artifact@v3
+      if: ${{ github.event.inputs.version-to-release != '' }}
+      with:
+        name: jars
+        path: target/*.jar
   release-artifacts:
     runs-on: ubuntu-latest
     name: Release artifacts
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    needs: run-tests
-    environment:
-      name: release
+    if: ${{ github.event.inputs.version-to-release != '' }}
+    needs:
+    - run-tests
+    - build-artifacts
     steps:
     - uses: piotr-yuxuan/walter-ci@main
-    - run: lein uberjar
-    - if: false
-      name: lein deploy clojars
+    - name: Set project version to ${{ github.event.inputs.version-to-release }}
+      run: |-
+        VERSION_FILE=$(ls resources/*.version)
+        echo ${VERSION_TO_RELEASE} > ${VERSION_FILE}
+        git add ${VERSION_FILE}
+    - name: Retrieve artifacts
+      uses: actions/download-artifact@v3
+      if: ${{ github.event.inputs.version-to-release != '' }}
+      with:
+        name: jars
+        path: target
+    - run: tree -L 1 -Chup ./target
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit -m "Version ${VERSION_TO_RELEASE}" -m "[skip ci]"
+      if: steps.diff.outcome == 'failure'
+    - run: git tag -a ${VERSION_TO_RELEASE} -m "Version ${VERSION_TO_RELEASE}"
+      if: steps.diff.outcome == 'failure'
+    - run: git push --follow-tags
+      if: steps.diff.outcome == 'failure'
+    - uses: softprops/action-gh-release@fe9a9bd3295828558c7a3c004f23f3bf77d155b2
+      with:
+        generate_release_notes: true
+        tag_name: ${{ github.event.inputs.version-to-release }}
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: false
+        files: target/*-standalone.jar
+    - name: Deploy on Clojars?
+      id: target-clojars
+      run: lein pprint :deploy-repositories | bb --stream -I --eval '(System/exit (if (contains? (into {} *input*) (first *command-line-args*)) 0 1))' "clojars"
+      continue-on-error: true
+    - name: lein deploy clojars
+      if: steps.target-clojars.outcome == 'sucess'
       run: walter retry
       env:
         WALTER_TRY: lein deploy clojars
-    - if: false
-      name: lein deploy github
+    - name: Deploy on GitHub?
+      id: target-github
+      run: lein pprint :deploy-repositories | bb --stream -I --eval '(System/exit (if (contains? (into {} *input*) (first *command-line-args*)) 0 1))' "github"
+      continue-on-error: true
+    - name: lein deploy github
+      if: steps.target-github.outcome == 'sucess'
       run: walter retry
       env:
         WALTER_TRY: lein deploy github
-    - if: false
-      uses: softprops/action-gh-release@fe9a9bd3295828558c7a3c004f23f3bf77d155b2
-      with:
-        generate_release_notes: true
-        draft: true
-        files: target/*-standalone.jar
