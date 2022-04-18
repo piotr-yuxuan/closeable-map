@@ -99,7 +99,7 @@ jobs:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: DeLaGuardo/clojure-lint-action@2d6013175031096ae07bc9b90a07173029ad7dc9
       with:
-        clj-kondo-args: --lint src test --fail-level error
+        clj-kondo-args: --lint src test
         github_token: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true
     - name: Ignore any error code
