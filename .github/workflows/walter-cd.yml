@@ -38,6 +38,8 @@ jobs:
     name: Run tests
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
   build-artifacts:
     runs-on: ubuntu-latest
@@ -45,6 +47,8 @@ jobs:
     if: ${{ github.event.inputs.version-to-release != '' }}
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Set project version to ${{ github.event.inputs.version-to-release }}
       run: |-
         VERSION_FILE=$(ls resources/*.version)
@@ -67,6 +71,8 @@ jobs:
     - build-artifacts
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Set project version to ${{ github.event.inputs.version-to-release }}
       run: |-
         VERSION_FILE=$(ls resources/*.version)
@@ -116,8 +122,23 @@ jobs:
         WALTER_TRY: lein deploy github
     - name: Build cljdoc ahead of the first visitor
       run: |-
+        PROJECT_GROUP=$(lein pprint --no-pretty -- :group)
+        PROJECT_NAME=$(lein pprint --no-pretty -- :name)
         curl 'https://cljdoc.org/api/request-build2' \
-        -H 'Content-Type: application/x-www-form-urlencoded' \
-        -H 'Origin: https://cljdoc.org' \
-        -H 'Referer: https://cljdoc.org/d/com.github.piotr-yuxuan/walter-ci/${VERSION_TO_RELEASE}' \
-        --data-raw 'project=com.github.piotr-yuxuan%2Fwalter-ci&version=${VERSION_TO_RELEASE}'
+          -X POST \
+          -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:100.0) Gecko/20100101 Firefox/100.0' \
+          -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8' \
+          -H 'Accept-Language: en-US,en;q=0.5' \
+          -H 'Accept-Encoding: gzip, deflate, br' \
+          -H 'Content-Type: application/x-www-form-urlencoded' \
+          -H 'Origin: https://cljdoc.org' \
+          -H 'DNT: 1' \
+          -H 'Connection: keep-alive' \
+          -H 'Referer: https://cljdoc.org/d/${PROJECT_GROUP}/${PROJECT_NAME}/${VERSION_TO_RELEASE}' \
+          -H 'Upgrade-Insecure-Requests: 1' \
+          -H 'Sec-Fetch-Dest: document' \
+          -H 'Sec-Fetch-Mode: navigate' \
+          -H 'Sec-Fetch-Site: same-origin' \
+          -H 'Sec-Fetch-User: ?1' \
+          -H 'TE: trailers' \
+          --data-raw 'project=${PROJECT_GROUP}%2F${PROJECT_NAME}&version=${VERSION_TO_RELEASE}'
