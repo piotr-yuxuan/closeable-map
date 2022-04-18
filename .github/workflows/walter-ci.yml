@@ -45,11 +45,41 @@ jobs:
       with:
         sarif_file: clj-holmes.sarif
         wait-for-processing: true
+  security-policy:
+    runs-on: ubuntu-latest
+    name: 'Security: policy'
+    needs:
+    - security-nvd
+    - security-sarif-clojure
+    - security-sarif-terraform
+    - security-sarif-trivy
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: |-
+        walter security-policy \
+          --current-version $(awk '{$1=$1};1' < ./resources/*.version) \
+          --current-commit $(git rev-parse HEAD)
+    - run: git add .
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Security policy for version $(awk '{$1=$1};1' < ./resources/*.version)"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
   security-nvd:
     runs-on: ubuntu-latest
     name: 'Security: clojure,nvd'
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
       with:
         path: ~/.m2/repository
@@ -80,6 +110,8 @@ jobs:
     name: Build artifacts
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein uberjar
     - run: lein with-profile uberjar pom
     - uses: actions/upload-artifact@v3
@@ -109,6 +141,8 @@ jobs:
       WALTER_GITHUB_PASSWORD: ${{ secrets.WALTER_GITHUB_PASSWORD }}
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: walter conform-repository
     - run: git add .github/CODEOWNERS.yml
     - run: git add .github/FUNDING.yml
@@ -128,6 +162,8 @@ jobs:
     name: Update .gitignore
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: walter update-git-ignore
     - run: git add .gitignore
     - run: git diff --staged --exit-code
@@ -169,6 +205,8 @@ jobs:
     name: List dependency licenses
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein licenses :csv > ./doc/Licenses.csv
     - run: sort -o ./doc/Licenses.csv{,}
     - run: awk -i inplace 'BEGINFILE{print "Library name,Version,License name"}{print}' ./doc/Licenses.csv
@@ -189,6 +227,8 @@ jobs:
     name: Sort namespace forms
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein help
     - run: lein ns-sort
     - run: git add .
@@ -208,6 +248,8 @@ jobs:
     name: Idiomatic code
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: clojure -M:lint/idiom -- --replace
     - run: git add .
     - run: git diff --staged --exit-code
@@ -258,6 +300,8 @@ jobs:
     name: Update dependency versions
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein ancient upgrade :no-tests :all :recursive :check-clojure :allow-qualified
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
     - run: git add .
@@ -277,6 +321,8 @@ jobs:
     name: Code coverage
     steps:
     - uses: piotr-yuxuan/walter-ci@main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
       with:
         path: ~/.m2/repository
