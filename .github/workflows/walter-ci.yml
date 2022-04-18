@@ -7,7 +7,12 @@
 name: Walter CI
 'on':
   repository_dispatch: null
-  workflow_dispatch: null
+  workflow_dispatch:
+    inputs:
+      walter-version:
+        description: Walter bin version
+        required: false
+        type: string
   schedule:
   - cron: 28 6,18 * * *
 concurrency:
@@ -20,7 +25,36 @@ env:
   GIT_COMMITTER_EMAIL: ${{ secrets.WALTER_GIT_EMAIL }}
   GIT_COMMITTER_NAME: ${{ secrets.WALTER_AUTHOR_NAME }}
   GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  WALTER_VERSION: ${{ github.event.inputs.walter-version }}
 jobs:
+  sarif-terraform:
+    runs-on: ubuntu-latest
+    name: Terraform tfsec vulnerabilities
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: aquasecurity/tfsec-sarif-action@9b703869c5108700605056134506e274ef6e9bd3
+      with:
+        sarif_file: tfsec.sarif
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: tfsec.sarif
+        wait-for-processing: true
+  sarif-clojure:
+    runs-on: ubuntu-latest
+    name: Clojure clj-holmes vulnerabilities
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: clj-holmes/clj-holmes-action@200d2d03900917d7eb3c24fc691ab83579a87fcb
+      with:
+        output-type: sarif
+        output-file: tfsec.sarif
+        fail-on-result: 'false'
+    - name: Upload analysis results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: tfsec.sarif
+        wait-for-processing: true
   conform-repository:
     runs-on: ubuntu-latest
     name: Conform GitHub repository
@@ -61,28 +95,9 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
-  ns-sort:
-    runs-on: ubuntu-latest
-    name: Sort namespace forms
-    steps:
-    - uses: piotr-yuxuan/walter-ci@main
-    - run: lein help
-    - run: lein ns-sort
-    - run: git add .
-    - run: git diff --staged --exit-code
-      continue-on-error: true
-      id: diff
-    - run: git commit --message "Sort namespace forms"
-      if: steps.diff.outcome == 'failure'
-    - name: git push
-      run: walter retry
-      if: steps.diff.outcome == 'failure'
-      env:
-        WALTER_TRY: git push
-        WALTER_BEFORE_RETRY: git pull --rebase
   report-vulnerabilities:
     runs-on: ubuntu-latest
-    name: Scan and report vulnerabilities
+    name: Clojure nvd vulnerabilities
     steps:
     - uses: piotr-yuxuan/walter-ci@main
     - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
@@ -93,6 +108,8 @@ jobs:
     - run: git rm "./doc/Known vulnerabilities.txt"
       continue-on-error: true
     - run: clojure -T:security/nvd nvd.task/check :classpath '"'"$(lein with-profile -user,-dev classpath)"'"'
+      continue-on-error: true
+    - run: bb "$HOME/.walter-ci/cut-nvd.clj" ./target/nvd/dependency-check-report.csv
       continue-on-error: true
     - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
     - run: git add ./doc/known-vulnerabilities.csv
@@ -107,24 +124,18 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
-  code-coverage:
+  ns-sort:
     runs-on: ubuntu-latest
-    name: Code coverage
+    name: Sort namespace forms
     steps:
     - uses: piotr-yuxuan/walter-ci@main
-    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-perf-${{ hashFiles('**/project.clj') }}
-        restore-keys: ${{ runner.os }}-maven-
-    - run: git rm ./doc/code-coverage/
-      continue-on-error: true
-    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --cov-text --cov-html
-    - run: git add ./doc/code-coverage/**.{txt,css,html}
+    - run: lein help
+    - run: lein ns-sort
+    - run: git add .
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
-    - run: git commit --message "Update code coverage"
+    - run: git commit --message "Sort namespace forms"
       if: steps.diff.outcome == 'failure'
     - name: git push
       run: walter retry
@@ -162,6 +173,31 @@ jobs:
       continue-on-error: true
       id: diff
     - run: git commit --message "Update dependency versions"
+      if: steps.diff.outcome == 'failure'
+    - name: git push
+      run: walter retry
+      if: steps.diff.outcome == 'failure'
+      env:
+        WALTER_TRY: git push
+        WALTER_BEFORE_RETRY: git pull --rebase
+  code-coverage:
+    runs-on: ubuntu-latest
+    name: Code coverage
+    steps:
+    - uses: piotr-yuxuan/walter-ci@main
+    - uses: actions/cache@8f1e2e02865c42348f9baddbbaafb1841dce610a
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-perf-${{ hashFiles('**/project.clj') }}
+        restore-keys: ${{ runner.os }}-maven-
+    - run: git rm ./doc/code-coverage/
+      continue-on-error: true
+    - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --cov-text --cov-html
+    - run: git add ./doc/code-coverage/**.{txt,css,html}
+    - run: git diff --staged --exit-code
+      continue-on-error: true
+      id: diff
+    - run: git commit --message "Update code coverage"
       if: steps.diff.outcome == 'failure'
     - name: git push
       run: walter retry
