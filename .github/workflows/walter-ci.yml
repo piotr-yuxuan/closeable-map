@@ -212,9 +212,9 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: lein with-profile uberjar licenses :csv > ./doc/licences.csv
-    - run: sort -o ./doc/Licenses.csv{,}
+    - run: sort -o ./doc/licenses.csv{,}
     - run: awk -i inplace 'BEGINFILE{print "Library name,Version,License name"}{print}' ./doc/licences.csv
-    - run: git add ./doc/Licenses.csv
+    - run: git add ./doc/licenses.csv
       continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
