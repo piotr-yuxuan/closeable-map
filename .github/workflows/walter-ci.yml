@@ -62,6 +62,7 @@ jobs:
           --current-version $(awk '{$1=$1};1' < ./resources/*.version) \
           --current-commit $(git rev-parse HEAD)
     - run: git add .
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -94,6 +95,7 @@ jobs:
       continue-on-error: true
     - run: cp ./target/nvd/dependency-check-report.csv ./doc/known-vulnerabilities.csv
     - run: git add ./doc/known-vulnerabilities.csv
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -125,14 +127,11 @@ jobs:
     name: clj-kondo, a linter for Clojure
     steps:
     - uses: actions/checkout@main
-    - uses: DeLaGuardo/clojure-lint-action@2d6013175031096ae07bc9b90a07173029ad7dc9
+    - uses: DeLaGuardo/setup-clj-kondo@afc83dbbf4e7e32e04649e29dbf30668d30e9e3e
       with:
-        clj-kondo-args: --lint src test
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        version: 2022.04.08
+    - run: clj-kondo --lint src --config '{:output {:pattern "::warning file={{filename}},line={{row}},col={{col}}::{{message}}"}}'
       continue-on-error: true
-    - name: Ignore any error code
-      if: always()
-      run: echo 0
   conform-repository:
     runs-on: ubuntu-latest
     name: Conform GitHub repository
@@ -145,7 +144,9 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: walter conform-repository
     - run: git add .github/CODEOWNERS.yml
+      continue-on-error: true
     - run: git add .github/FUNDING.yml
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -166,6 +167,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: walter update-git-ignore
     - run: git add .gitignore
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -204,13 +206,16 @@ jobs:
     runs-on: ubuntu-latest
     name: List dependency licenses
     steps:
+    - run: git rm "./doc/Licenses.csv"
+      continue-on-error: true
     - uses: piotr-yuxuan/walter-ci@main
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-    - run: lein licenses :csv > ./doc/Licenses.csv
+    - run: lein with-profile uberjar licenses :csv > ./doc/licences.csv
     - run: sort -o ./doc/Licenses.csv{,}
-    - run: awk -i inplace 'BEGINFILE{print "Library name,Version,License name"}{print}' ./doc/Licenses.csv
+    - run: awk -i inplace 'BEGINFILE{print "Library name,Version,License name"}{print}' ./doc/licences.csv
     - run: git add ./doc/Licenses.csv
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -232,6 +237,7 @@ jobs:
     - run: lein help
     - run: lein ns-sort
     - run: git add .
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -252,6 +258,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - run: clojure -M:lint/idiom -- --replace
     - run: git add .
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -305,6 +312,7 @@ jobs:
     - run: lein ancient upgrade :no-tests :all :recursive :check-clojure :allow-qualified
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --skip-meta :slow --skip-meta :perf
     - run: git add .
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
@@ -332,6 +340,7 @@ jobs:
       continue-on-error: true
     - run: lein with-profile +walter/kaocha,+kaocha run -m kaocha.runner --plugin cloverage --cov-output ./doc/code-coverage --skip-meta :slow --skip-meta :perf --cov-text --cov-html
     - run: git add ./doc/code-coverage/**.{txt,css,html}
+      continue-on-error: true
     - run: git diff --staged --exit-code
       continue-on-error: true
       id: diff
