@@ -107,21 +107,6 @@ jobs:
       env:
         WALTER_TRY: git push
         WALTER_BEFORE_RETRY: git pull --rebase
-  build-artifacts:
-    runs-on: ubuntu-latest
-    name: Build artifacts
-    steps:
-    - uses: piotr-yuxuan/walter-ci@main
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-    - run: lein uberjar
-    - run: lein with-profile uberjar pom
-    - uses: actions/upload-artifact@v3
-      with:
-        name: jars
-        path: |-
-          target/*.jar
-          pom.xml
   clj-kondo:
     runs-on: ubuntu-latest
     name: clj-kondo, a linter for Clojure
@@ -276,17 +261,15 @@ jobs:
     name: 'Security: general,clojure'
     env:
       TRIVY_CACHE_DIR: ${HOME}/.trivy-cache-dir
-    needs:
-    - build-artifacts
+    needs: []
     permissions:
       security-events: write
     steps:
-    - uses: actions/checkout@main
-    - name: Retrieve artifacts
-      uses: actions/download-artifact@v3
+    - uses: piotr-yuxuan/walter-ci@main
       with:
-        name: jars
-        path: target
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: lein uberjar
+    - run: lein with-profile uberjar pom
     - uses: aquasecurity/trivy-action@master
       continue-on-error: true
       with:
