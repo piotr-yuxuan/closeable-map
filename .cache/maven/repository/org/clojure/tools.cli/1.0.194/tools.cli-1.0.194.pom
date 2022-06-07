@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>tools.cli</artifactId>
+  <version>1.0.194</version>
+  <name>tools.cli</name>
+
+  <parent>
+    <groupId>org.clojure</groupId>
+    <artifactId>pom.contrib</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <developers>
+    <developer><name>Gareth Jones</name></developer>
+    <developer><name>Sung Pae</name></developer>
+    <developer><name>Sean Corfield</name></developer>
+  </developers>
+
+  <properties>
+    <!-- set clojure.version to >= 1.8.0 to run cljs test suite
+         (and make sure to run on jdk >= 1.8 for nashorn support) -->
+    <clojure.version>1.8.0</clojure.version>
+  </properties>
+
+  <scm>
+    <connection>scm:git:git@github.com:clojure/tools.cli.git</connection>
+    <developerConnection>scm:git:git@github.com:clojure/tools.cli.git</developerConnection>
+    <url>git@github.com:clojure/tools.cli.git</url>
+    <tag>tools.cli-1.0.194</tag>
+  </scm>
+</project>

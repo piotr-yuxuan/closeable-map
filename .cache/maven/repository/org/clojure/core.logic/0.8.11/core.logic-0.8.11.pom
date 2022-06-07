@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>core.logic</artifactId>
+  <version>0.8.11</version>
+  <name>${artifactId}</name>
+  <description>A logic/relational programming library for Clojure</description>
+
+  <licenses>
+    <license>
+      <name>Eclipse Public License 1.0</name>
+      <url>http://opensource.org/licenses/eclipse-1.0.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <parent>
+    <groupId>org.clojure</groupId>
+    <artifactId>pom.contrib</artifactId>
+    <version>0.1.2</version>
+  </parent>
+
+  <developers>
+    <developer>
+      <id>swannodette</id>
+      <name>David Nolen</name>
+      <url>http://dosync.posterous.com</url>
+    </developer>
+  </developers>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojurescript</artifactId>
+      <version>0.0-2261</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <scm>
+    <connection>scm:git:git://github.com/clojure/core.logic.git</connection>
+    <developerConnection>scm:git:git://github.com/clojure/core.logic.git</developerConnection>
+    <url>http://github.com/clojure/core.logic</url>
+    <tag>core.logic-0.8.11</tag>
+  </scm>
+</project>
