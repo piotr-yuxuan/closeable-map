@@ -28,6 +28,7 @@ recursively.
 It is a tiny alternative to more capable projects:
 
 - Application state management in a map: [juxt/clip](https://github.com/juxt/clip)
+- Simple library to initialise an app stack: [sathyavijayan/upit](https://github.com/sathyavijayan/upit)
 - Application state management:
   [stuartsierra/component](https://github.com/stuartsierra/component),
   [weavejester/integrant](weavejester/integrant),
