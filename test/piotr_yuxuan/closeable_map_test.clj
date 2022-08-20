@@ -1,6 +1,6 @@
 (ns piotr-yuxuan.closeable-map-test
-  (:require [clojure.test :refer [deftest testing is]]
-            [piotr-yuxuan.closeable-map :as closeable-map])
+  (:require [piotr-yuxuan.closeable-map :as closeable-map]
+            [clojure.test :refer [deftest testing is]])
   (:import (java.io Closeable)
            (clojure.lang ExceptionInfo)))
 
