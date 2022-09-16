@@ -43,7 +43,7 @@ It is a tiny alternative to more capable projects:
 In your project, require:
 
 ``` clojure
-(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [close-with with-tag]])
+(require '[piotr-yuxuan.closeable-map :as closeable-map :refer [close-with with-tag close!]])
 ```
 
 Define an application that can be started, and closed.
@@ -167,22 +167,39 @@ some similar method. For example instances of
                     (http/connection-pool {:pool-opts config}))}
 ```
 
-You may also extend this library by giving new dispatch values to
-multimethod [[piotr-yuxuan.closeable-map/close!]]. Once evaluated,
-this will work accross all your code. The multimethod is dispatched on
-the concrete class of its argument:
+## Java objects
+
+A Java object does not implement interface `clojure.lang.IObj` so it
+is unable to carry Clojure metadata. As such, you can't give a it a
+tag like `::closeable-map/fn`. You may also extend this library by
+giving new dispatch values to multimethod
+[[piotr-yuxuan.closeable-map/close!]]. Once evaluated, this will work
+accross all your code. The multimethod is dispatched on the concrete
+class of its argument:
 
 ``` clojure
 (import '(java.util.concurrent ExecutorService))
-(defmethod closeable-map/close! ExecutorService
+(defmethod close! ExecutorService
   [x]
   (.shutdown ^ExecutorService x))
 
 (import '(io.aleph.dirigiste IPool))
-(defmethod closeable-map/close! IPool
+(defmethod close! IPool
   [x]
   (.shutdown ^IPool x))
+
+(import '(clojure.lang Atom))
+(defmethod close! Atom
+  [x]
+  (reset! x nil))
+
+(import '(clojure.core.async.impl.protocols Channel))
+(defmethod close! Channel
+  [x]
+  (async/close! x))
 ```
+
+A Java object may be wrapped as a `closeable*`.
 
 ## All or nothing
 

@@ -234,7 +234,8 @@ usual.
             [potemkin :refer [def-map-type]])
   (:import (java.io Closeable)
            (java.lang AutoCloseable)
-           (java.util Map)))
+           (java.util Map)
+           (clojure.lang IObj)))
 
 (def ^:dynamic *swallow?*
   "Dynamic var. If bound to a logically true value in closing thread,
@@ -309,6 +310,13 @@ usual.
           (true? fn-tag) (x)
           fn-tag (fn-tag x))))
 
+(defn -close-*closeables*
+  [*closeables*]
+  (doseq [c @*closeables*]
+    (try (close! c)
+         (catch Throwable _)
+         (finally (swap! *closeables* rest)))))
+
 (def visitor
   "Take a form `x` as one argument and traverse it while trying to
   [[piotr-yuxuan.closeable-map/close!]] inner items.
@@ -361,7 +369,9 @@ usual.
                           (after-close % swallow))
                         %)
                    (do (when-not (ignore? x)
-                         (before-close x swallow))
+                         (before-close x swallow)
+                         (when-let [*closeables* (::*closeables* (meta x))]
+                           (-close-*closeables* *closeables*)))
                        x))))))
 
 (def-map-type CloseableMap [m mta]
@@ -373,7 +383,8 @@ usual.
   (with-meta [_ mta] (CloseableMap. m mta))
 
   Closeable ;; Closeable is a subinterface of AutoCloseable.
-  (^void close [this] (visitor m)))
+  ;; `this` has `mta` as meta whilst may have no meta
+  (^void close [this] (visitor this)))
 
 (defn ^CloseableMap closeable-map
   "Take any object that implements a map interface and return a new map
@@ -461,12 +472,18 @@ usual.
 (defmacro closeable*
   "Use it within `closeable-map*` or `with-closeable*` to avoid
   partially open state when an exception is thrown on evaluating
-  closeable forms."
+  closeable forms.
+
+  When `x` is a Java object, store as a object that may be closed. You
+  may then extend the multimethod `close!` to provide a standard way
+  to close this class of objects."
   [x]
   `(do (assert *closeables* "`closeable` should only be used within `closeable-map*` or `with-closeable*`.")
        (let [ret# ~x]
          (swap! *closeables* conj ret#)
-         ret#)))
+         (if (instance? IObj ret#)
+           (with-tag ::ignore ret#)
+           ret#))))
 
 (defmacro with-closeable*
   "Take two arguments, a `bindings` vector and a `body`. Like a `let`,
@@ -551,15 +568,13 @@ usual.
              (swap! *closeables* conj ~v)
              (with-closeable* ~(subvec bindings 2) ~@body))
            (catch Throwable th#
-             (doseq [c# @*closeables*]
-               (try (close! c#)
-                    (catch Throwable _#)
-                    (finally (swap! *closeables* rest))))
+             (-close-*closeables* *closeables*)
              (throw th#)))))))
 
 (defmacro ^CloseableMap closeable-map*
   "Avoid partially open state when an exception is thrown on evaluating
-  inner closeable forms wrapped by `closeable`.
+  inner closeable forms wrapped by `closeable`. Inner forms must
+  return a map.
 
   ``` clojure
   (closeable-map*
@@ -583,9 +598,11 @@ usual.
   Known (minor) issue: type hint is not acknowledged, you have to tag
   it yourself with `^CloseableMap` (most precise),
   `^java.io.Closeable`, or `^java.lang.AutoCloseable` (most generic)."
-  [m]
+  [& body]
   `(binding [*closeables* (or *closeables* (atom ()))]
-     (try (vary-meta (closeable-map ~m) assoc :tag `CloseableMap)
+     (try (vary-meta (closeable-map (do ~@body)) assoc
+                     :tag `CloseableMap
+                     ::*closeables* *closeables*)
           (catch Throwable th#
             (doseq [c# @*closeables*]
               (try (close! c#)

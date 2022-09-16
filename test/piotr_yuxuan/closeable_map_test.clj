@@ -276,29 +276,51 @@
     (is (= [::a expected-ex] @log))))
 
 (deftest closeable-map*-test
-  (let [log (atom [])
-        a ^::closeable-map/fn #(swap! log conj ::a)
-        b ^::closeable-map/fn #(swap! log conj ::b)
-        c ^::closeable-map/fn #(swap! log conj ::c)
-        m (closeable-map/closeable-map*
-            {:a a
-             :nested {:b b
-                      :c c
-                      :d ::d}})]
-    (is (= m {:a a
-              :nested {:b b
-                       :c c
-                       :d ::d}}))
-    (.close ^Closeable m)
-    (is (= [::a ::b ::c] @log)))
-  (let [log (atom [])
-        expected-ex (ex-info "expected" {})]
-    (try (closeable-map/closeable-map*
-           {:a (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::a))
-            :nested {:b (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::b))
-                     :c (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::c))
-                     :d (throw expected-ex)}})
-         (catch ExceptionInfo actual-ex
-           (swap! log conj actual-ex)
-           ::caught-return))
-    (is (= [::c ::b ::a expected-ex] @log))))
+  (testing "closeable-map*"
+    (testing "no definition exception, closing"
+      (let [log (atom [])
+            a ^::closeable-map/fn #(swap! log conj ::a)
+            b ^::closeable-map/fn #(swap! log conj ::b)
+            c ^::closeable-map/fn #(swap! log conj ::c)
+            m (closeable-map/closeable-map*
+                {:a a
+                 :nested {:b b
+                          :c c
+                          :d ::d}})]
+        (is (= m {:a a
+                  :nested {:b b
+                           :c c
+                           :d ::d}}))
+        (.close ^Closeable m)
+        (is (= [::a ::b ::c] @log))))
+    (testing "when an exception happens while evaluating a closeable*, closing all the previous closeable* in order"
+      (let [log (atom [])
+            expected-ex (ex-info "expected" {})]
+        (try (closeable-map/closeable-map*
+               {:a (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::a))
+                :nested {:b (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::b))
+                         :c (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::c))
+                         :d (throw expected-ex)
+                         :e (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::e))}})
+             (catch ExceptionInfo actual-ex
+               (swap! log conj actual-ex)
+               ::caught-return))
+        (is (= [::c ::b ::a expected-ex] @log))))
+    (testing "no definition exception, closing in order each closeable* only once"
+      (let [log (atom [])
+            ^Closeable c (closeable-map/closeable-map*
+                           {:a (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::a))
+                            :nested {:b (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::b))
+                                     :c (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::c))
+                                     :d (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::d))}})]
+        (.close c)
+        (is (= [::d ::c ::b ::a] @log))))
+    (testing "closeable* not reachable as a map value"
+      (let [log (atom [])
+            ^Closeable c (closeable-map/closeable-map*
+                           (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::a))
+                           (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::b))
+                           {:some [(closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::c))
+                                   (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::d))]})]
+        (.close c)
+        (is (= [::d ::c ::b ::a] @log))))))
