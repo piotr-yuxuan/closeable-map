@@ -600,12 +600,9 @@ usual.
   `^java.io.Closeable`, or `^java.lang.AutoCloseable` (most generic)."
   [& body]
   `(binding [*closeables* (or *closeables* (atom ()))]
-     (try (vary-meta (closeable-map (unquote-splicing body)) assoc
+     (try (vary-meta (closeable-map (do :no-reformat ~@body)) assoc
                      :tag `CloseableMap
                      ::*closeables* *closeables*)
           (catch Throwable th#
-            (doseq [c# @*closeables*]
-              (try (close! c#)
-                   (catch Throwable _#)
-                   (finally (swap! *closeables* rest))))
+            (-close-*closeables* *closeables*)
             (throw th#)))))
