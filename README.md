@@ -172,10 +172,9 @@ some similar method. For example instances of
 A Java object does not implement interface `clojure.lang.IObj` so it
 is unable to carry Clojure metadata. As such, you can't give a it a
 tag like `::closeable-map/fn`. You may also extend this library by
-giving new dispatch values to multimethod
-[[piotr-yuxuan.closeable-map/close!]]. Once evaluated, this will work
-accross all your code. The multimethod is dispatched on the concrete
-class of its argument:
+giving new dispatch values to multimethod `close!`. Once evaluated,
+this will work accross all your code. The multimethod is dispatched on
+the concrete class of its argument:
 
 ``` clojure
 (import '(java.util.concurrent ExecutorService))
@@ -223,6 +222,17 @@ handy. It outcome in one of the following:
    :kafka {:consumer (closeable* (kafka-consumer config))
            :producer (closeable* (kafka-producer config))
            :schema.registry.url "https://localhost"}})
+```
+
+Closeable objects not directly within the map may still be closed if
+wrapped in `closeable*`:
+
+``` clojure
+(closeable-map*
+  (closeable* (kafka-consumer config))
+  (closeable* (kafka-producer config))
+  {:server (closeable* (http/start-server (api config)))
+   :schema.registry.url "https://localhost"})
 ```
 
 ### No half-broken state in general code
