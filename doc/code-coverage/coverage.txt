@@ -1,2 +1,2 @@
 Lines Non-Blank Instrumented Covered Partial
-  384       337          120      72      24 piotr_yuxuan/closeable_map.clj
+  745       630          141      92       9 piotr_yuxuan/closeable_map.clj
