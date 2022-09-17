@@ -310,13 +310,6 @@ usual.
           (true? fn-tag) (x)
           fn-tag (fn-tag x))))
 
-(defn -close-*closeables*
-  [*closeables*]
-  (doseq [c @*closeables*]
-    (try (close! c)
-         (catch Throwable _)
-         (finally (swap! *closeables* rest)))))
-
 (def visitor
   "Take a form `x` as one argument and traverse it while trying to
   [[piotr-yuxuan.closeable-map/close!]] inner items.
@@ -371,7 +364,11 @@ usual.
                    (do (when-not (ignore? x)
                          (before-close x swallow)
                          (when-let [*closeables* (::*closeables* (meta x))]
-                           (-close-*closeables* *closeables*)))
+                           (doseq [c @*closeables*]
+                             (try (swallow c close!)
+                                  (catch Throwable th (throw th))
+                                  ;; We bubble up the exception if any, but firstly we swipe this closeable off the list.
+                                  (finally (swap! *closeables* rest))))))
                        x))))))
 
 (def-map-type CloseableMap [m mta]
@@ -568,7 +565,11 @@ usual.
              (swap! *closeables* conj ~v)
              (with-closeable* ~(subvec bindings 2) ~@body))
            (catch Throwable th#
-             (-close-*closeables* *closeables*)
+             (doseq [c# @*closeables*]
+               (try (close! c#)
+                    (catch Throwable th# (throw th#))
+                    ;; We bubble up the exception if any, but firstly we swipe this closeable off the list.
+                    (finally (swap! *closeables* rest))))
              (throw th#)))))))
 
 (defmacro ^CloseableMap closeable-map*
@@ -604,5 +605,9 @@ usual.
                      :tag `CloseableMap
                      ::*closeables* *closeables*)
           (catch Throwable th#
-            (-close-*closeables* *closeables*)
+            (doseq [c# @*closeables*]
+              (try (close! c#)
+                   (catch Throwable th# (throw th#))
+                   ;; We bubble up the exception if any, but firstly we swipe this closeable off the list.
+                   (finally (swap! *closeables* rest))))
             (throw th#)))))

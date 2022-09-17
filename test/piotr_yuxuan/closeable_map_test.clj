@@ -305,6 +305,18 @@
              (catch ExceptionInfo actual-ex
                (swap! log conj actual-ex)
                ::caught-return))
+        (is (= [::c ::b ::a expected-ex] @log)))
+      (let [log (atom [])
+            expected-ex (ex-info "expected" {})]
+        (try (closeable-map/closeable-map*
+               (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::a))
+               (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::b))
+               {:nested {:c (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::c))
+                         :d (throw expected-ex)
+                         :e (closeable-map/closeable* ^::closeable-map/fn #(swap! log conj ::e))}})
+             (catch ExceptionInfo actual-ex
+               (swap! log conj actual-ex)
+               ::caught-return))
         (is (= [::c ::b ::a expected-ex] @log))))
     (testing "no definition exception, closing in order each closeable* only once"
       (let [log (atom [])
