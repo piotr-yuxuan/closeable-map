@@ -1,2 +1,2 @@
 Lines Non-Blank Instrumented Covered Partial
-  608       518          141      93       9 piotr_yuxuan/closeable_map.clj
+  613       524          140      91       9 piotr_yuxuan/closeable_map.clj
