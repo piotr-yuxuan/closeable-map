@@ -196,6 +196,13 @@ the concrete class of its argument:
 (defmethod close! Channel
   [x]
   (async/close! x))
+
+(import '(xtdb.node XtdbNode))
+(defmethod c/close! XtdbNode
+  [^Closeable x]
+  (doto x
+    xt/sync
+    (.close)))
 ```
 
 A Java object may be wrapped as a `closeable*`.
