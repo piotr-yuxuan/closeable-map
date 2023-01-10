@@ -19,7 +19,7 @@
              :dev {:global-vars {*warn-on-reflection* true}}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
                               "-Dclojure.compiler.direct-linking=true"]}
-             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.71.1119"]]}]}
+             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.72.1136"]]}]}
   :deploy-repositories [["clojars" {:sign-releases false
                                     :url "https://clojars.org/repo"
                                     :username :env/WALTER_CLOJARS_USERNAME
