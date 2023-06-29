@@ -15,7 +15,7 @@
                                       "state" "mount" "integrant" "closeable"
                                       "with-open" "clojure-maps" "system"]
                       :github/private? false}
-             :provided {:dependencies [[org.clojure/clojure "1.12.0-alpha3"]]}
+             :provided {:dependencies [[org.clojure/clojure "1.12.0-alpha4"]]}
              :dev {:global-vars {*warn-on-reflection* true}}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
                               "-Dclojure.compiler.direct-linking=true"]}
