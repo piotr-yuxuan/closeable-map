@@ -15,11 +15,11 @@
                                       "state" "mount" "integrant" "closeable"
                                       "with-open" "clojure-maps" "system"]
                       :github/private? false}
-             :provided {:dependencies [[org.clojure/clojure "1.12.0-alpha11"]]}
+             :provided {:dependencies [[org.clojure/clojure "1.12.0-alpha12"]]}
              :dev {:global-vars {*warn-on-reflection* true}}
              :jar {:jvm-opts ["-Dclojure.compiler.disable-locals-clearing=false"
                               "-Dclojure.compiler.direct-linking=true"]}
-             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.90.1383"]]}]}
+             :kaocha [:test {:dependencies [[lambdaisland/kaocha "1.91.1392"]]}]}
   :deploy-repositories [["clojars" {:sign-releases false
                                     :url "https://clojars.org/repo"
                                     :username :env/WALTER_CLOJARS_USERNAME
