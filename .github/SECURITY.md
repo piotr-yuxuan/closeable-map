@@ -13,8 +13,8 @@ enforces continuous vulnerability scans by the following tools:
 
 ## Supported Versions
 
-This message being present means that version `0.35.1`
-has been scrutinised on commit `6723ebf08d787abac949a9ac28418e2bf7ef9ba8`. See `git` log for
+This message being present means that version `0.36.2`
+has been scrutinised on commit `4efa00a6dcc8ceeb702004cf9b7c5157e67d5ce9`. See `git` log for
 history of supported versions.
 
 ## Known vulnerabilities
@@ -29,5 +29,5 @@ vulnerability can be exploited.
 
 ## Reporting a Vulnerability
 
-Open an issue, or contact the [code owners](.github/CODEOWNERS.yml) on
+Open an issue, or contact the [code owners](./CODEOWNERS.yml) on
 social media.
