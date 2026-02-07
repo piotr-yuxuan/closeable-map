@@ -9,7 +9,7 @@
   :pom-addition [:developers [:developer
                               [:name "胡雨軒 Петр"]
                               [:url "https://github.com/piotr-yuxuan"]]]
-  :dependencies [[potemkin/potemkin "0.4.8"]]
+  :dependencies [[potemkin/potemkin "0.4.9"]]
   :aot :all
   :profiles {:github {:github/topics ["map" "clojure" "state-management" "component"
                                       "state" "mount" "integrant" "closeable"
